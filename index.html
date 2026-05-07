@@ -1,0 +1,2967 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>观象 - 六爻卜卦</title>
+<style>
+  /* ========== 全局重置与基础 ========== */
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: "KaiTi", "STKaiti", "楷体", "Microsoft YaHei", serif;
+    background: #F5E6C8;
+    color: #2C1810;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    padding: 20px;
+  }
+  /* ========== 主容器 ========== */
+  .container {
+    max-width: 520px;
+    width: 100%;
+    background: #FFF8E7;
+    border: 3px solid #C8A42E;
+    border-radius: 12px;
+    padding: 24px 20px 30px;
+    box-shadow: 0 4px 20px rgba(160,120,50,0.15);
+    position: relative;
+    align-self: flex-start;
+  }
+  /* 中国风装饰角 */
+  .container::before, .container::after {
+    content: "☰";
+    position: absolute;
+    font-size: 18px;
+    color: #C8A42E;
+    opacity: 0.3;
+  }
+  .container::before { top: 6px; left: 10px; }
+  .container::after { bottom: 6px; right: 10px; transform: rotate(180deg); }
+
+  /* ========== 标题 ========== */
+  .header {
+    text-align: center;
+    border-bottom: 2px solid #C8A42E;
+    padding-bottom: 12px;
+    margin-bottom: 20px;
+    position: relative;
+  }
+  .header h1 {
+    font-size: 28px;
+    color: #A6861E;
+    letter-spacing: 8px;
+    font-weight: normal;
+  }
+  .header .subtitle {
+    font-size: 13px;
+    color: #8B7355;
+    margin-top: 4px;
+    letter-spacing: 2px;
+  }
+
+  /* ========== 摇卦区 ========== */
+  .toss-area {
+    text-align: center;
+    margin: 16px 0 20px;
+  }
+  .step-info {
+    font-size: 14px;
+    color: #8B7355;
+    margin-bottom: 12px;
+    letter-spacing: 1px;
+  }
+  .step-info .current { color: #A6861E; font-weight: bold; font-size: 18px; }
+
+  /* 铜钱 - 仿真方孔圆钱 */
+  .coins {
+    display: flex;
+    justify-content: center;
+    gap: 18px;
+    margin: 10px 0 16px;
+    min-height: 72px;
+  }
+  .coin {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    position: relative;
+    background: radial-gradient(circle at 35% 35%, #E8C44A, #C8A42E 50%, #8B6914);
+    border: 3px solid #7A5E10;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.2), inset 0 -2px 5px rgba(0,0,0,0.15);
+    transition: all 0.3s;
+    user-select: none;
+    flex-shrink: 0;
+  }
+  /* 方孔 */
+  .coin::before {
+    content: '';
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 14px; height: 14px;
+    background: #FFF8E7;
+    border: 2px solid #7A5E10;
+    z-index: 2;
+  }
+  /* 初始状态 - 中心小圆点 */
+  .coin.init::after {
+    content: '';
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 22px; height: 22px;
+    border: 1.5px dotted #7A5E10;
+    border-radius: 50%;
+    opacity: 0.35;
+    background: transparent;
+  }
+  /* 正面（字面/阴）- 内圈纹饰 */
+  .coin-front::after {
+    content: '';
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 30px; height: 30px;
+    border: 1.5px solid #7A5E10;
+    border-radius: 50%;
+    opacity: 0.45;
+    background: transparent;
+  }
+  /* 背面（背/阳）- 月牙纹 */
+  .coin-back::after {
+    content: '';
+    position: absolute;
+    top: 10px; right: 12px;
+    width: 12px; height: 7px;
+    border: 2px solid #7A5E10;
+    border-radius: 0 0 50% 50%;
+    border-top: none;
+    opacity: 0.4;
+    background: transparent;
+  }
+  .coin.flipping { animation: coinFlip 0.6s ease-in-out; }
+  @keyframes coinFlip {
+    0% { transform: rotateY(0deg) scale(1); }
+    25% { transform: rotateY(90deg) scale(0.95); }
+    50% { transform: rotateY(180deg) scale(1); }
+    75% { transform: rotateY(270deg) scale(0.95); }
+    100% { transform: rotateY(360deg) scale(1); }
+  }
+
+  /* 摇卦按钮 */
+  .toss-btn {
+    display: inline-block;
+    background: #C8A42E;
+    color: #FFF8E7;
+    border: none;
+    padding: 12px 40px;
+    font-size: 18px;
+    font-family: inherit;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+    letter-spacing: 4px;
+  }
+  .toss-btn:hover { background: #B89420; }
+  .toss-btn:active { transform: scale(0.97); }
+  .toss-btn:disabled {
+    background: #C0B090;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  /* 结果提示 */
+  .line-result {
+    margin-top: 10px;
+    font-size: 16px;
+    min-height: 26px;
+    color: #5C3D1E;
+    letter-spacing: 1px;
+  }
+  .line-result .yao-label { font-weight: bold; color: #A6861E; }
+  .line-result .changing-badge {
+    display: inline-block;
+    background: #C8A42E;
+    color: #FFF8E7;
+    font-size: 11px;
+    padding: 1px 8px;
+    border-radius: 4px;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+
+  /* ========== 卦象展示区 ========== */
+  .hexagram-area {
+    margin: 20px 0;
+    padding: 16px;
+    background: #FDF6E3;
+    border: 1px solid #E8D5B0;
+    border-radius: 8px;
+    min-height: 200px;
+  }
+
+  /* 卦爻线绘制 */
+  .hexagram-display {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 0;
+  }
+  .hexagram-title {
+    font-size: 22px;
+    color: #A6861E;
+    margin-bottom: 6px;
+    letter-spacing: 3px;
+  }
+  .yao-line {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 180px;
+    height: 26px;
+    position: relative;
+  }
+  .yao-line .line-shape {
+    display: block;
+    height: 6px;
+    border-radius: 3px;
+    background: #1A1A1A;
+    position: relative;
+    transition: all 0.3s;
+  }
+  .yao-line .line-shape.yang {
+    width: 140px;
+  }
+  .yao-line .line-shape.yin {
+    width: 140px;
+    height: 6px;
+    background: transparent;
+    background-image: linear-gradient(
+      to right,
+      #1A1A1A 0%, #1A1A1A 42%,
+      transparent 42%, transparent 58%,
+      #1A1A1A 58%, #1A1A1A 100%
+    );
+    border-radius: 3px;
+  }
+  .yao-line .yao-label-small {
+    position: absolute;
+    right: -30px;
+    font-size: 11px;
+    color: #A6861E;
+    width: 30px;
+  }
+  .yao-line.changing .line-shape.yang::after {
+    content: "●";
+    position: absolute;
+    right: -18px;
+    top: -6px;
+    font-size: 12px;
+    color: #C8A42E;
+  }
+  .yao-line.changing .line-shape.yin::after {
+    content: "●";
+    position: absolute;
+    right: -18px;
+    top: -8px;
+    font-size: 12px;
+    color: #C8A42E;
+  }
+
+  /* ========== 解读区域 ========== */
+  .reading-area { margin-top: 16px; }
+  .reading-card {
+    background: #FFF8E7;
+    border: 1px solid #E8D5B0;
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+  }
+  .reading-card .card-title {
+    font-size: 16px;
+    color: #A6861E;
+    border-bottom: 1px solid #E8D5B0;
+    padding-bottom: 4px;
+    margin-bottom: 8px;
+    letter-spacing: 2px;
+  }
+  .reading-card .card-body {
+    font-size: 14px;
+    line-height: 1.8;
+    color: #3C2A1A;
+  }
+  .reading-card .card-body .label { color: #A6861E; font-weight: bold; }
+  .reading-card .yao-text {
+    padding: 3px 0 3px 12px;
+    border-left: 2px solid #C8A42E;
+    margin: 4px 0;
+    font-size: 13px;
+  }
+  .changing-note {
+    background: #FDF6E3;
+    border: 1px solid #C8A42E;
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 13px;
+    color: #5C3D1E;
+    margin: 8px 0;
+    text-align: center;
+  }
+
+  /* ========== 白话解读 ========== */
+  .baihua-text {
+    font-size: 14px;
+    line-height: 1.9;
+    color: #3C2A1A;
+  }
+  .baihua-text p { margin-bottom: 8px; }
+  .classical-quote {
+    background: #FDF6E3;
+    border-left: 3px solid #C8A42E;
+    padding: 6px 12px;
+    margin: 8px 0;
+    font-size: 13px;
+    color: #5C3D1E;
+    font-style: italic;
+  }
+
+  /* ========== 典故案例 ========== */
+  .story-block { margin-bottom: 10px; }
+  .story-block .story-title {
+    font-size: 14px;
+    font-weight: bold;
+    color: #5C3D1E;
+    margin-bottom: 4px;
+  }
+  .story-block .story-title::before { content: "▸ "; color: #C8A42E; }
+  .story-text {
+    font-size: 13px;
+    line-height: 1.8;
+    color: #3C2A1A;
+    padding-left: 12px;
+    border-left: 2px solid #E8D5B0;
+  }
+  .story-source {
+    font-size: 12px;
+    color: #8B7355;
+    margin-top: 4px;
+    text-align: right;
+  }
+
+  /* ========== 防灾避祸 ========== */
+  .disaster-warning {
+    background: #FFF5F0;
+    border: 1px solid #E8A070;
+    border-radius: 6px;
+    padding: 10px 14px;
+    margin-bottom: 10px;
+  }
+  .disaster-warning .warn-icon { color: #C0392B; font-weight: bold; }
+  .disaster-warning .warn-text {
+    font-size: 13px;
+    line-height: 1.7;
+    color: #5C3020;
+  }
+  .avoidance-box {
+    background: #F0FFF0;
+    border: 1px solid #70B870;
+    border-radius: 6px;
+    padding: 10px 14px;
+  }
+  .avoidance-box .avoid-icon { color: #27AE60; font-weight: bold; }
+  .avoidance-box .avoid-text {
+    font-size: 13px;
+    line-height: 1.7;
+    color: #2C4A2C;
+  }
+
+  /* ========== 操作按钮 ========== */
+  .actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    margin-top: 18px;
+    flex-wrap: wrap;
+  }
+  .actions button {
+    background: transparent;
+    border: 1px solid #C8A42E;
+    color: #A6861E;
+    padding: 8px 24px;
+    font-size: 14px;
+    font-family: inherit;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 2px;
+  }
+  .actions button:hover {
+    background: #C8A42E;
+    color: #FFF8E7;
+  }
+  .actions button.primary {
+    background: #C8A42E;
+    color: #FFF8E7;
+  }
+  .actions button.primary:hover { background: #B89420; }
+
+  /* ========== 历史记录 ========== */
+  .history-area { margin-top: 20px; }
+  .history-toggle {
+    background: none;
+    border: none;
+    color: #8B7355;
+    font-size: 13px;
+    cursor: pointer;
+    font-family: inherit;
+    letter-spacing: 1px;
+    padding: 4px 8px;
+    border-bottom: 1px dashed #C8A42E;
+  }
+  .history-toggle:hover { color: #A6861E; }
+  .history-list {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+    margin-top: 8px;
+  }
+  .history-list.open { max-height: 500px; }
+  .history-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 8px;
+    border-bottom: 1px solid #F0E0C0;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .history-item:hover { background: #FDF6E3; }
+  .history-item .h-name { color: #5C3D1E; }
+  .history-item .h-time { color: #8B7355; font-size: 12px; }
+  .history-empty {
+    text-align: center;
+    color: #8B7355;
+    font-size: 13px;
+    padding: 12px 0;
+  }
+  .clear-history {
+    float: right;
+    background: none;
+    border: none;
+    color: #B08060;
+    font-size: 12px;
+    cursor: pointer;
+    font-family: inherit;
+    padding: 2px 6px;
+  }
+  .clear-history:hover { color: #A04020; }
+
+  /* ========== 响应式 ========== */
+  @media (max-width: 480px) {
+    .container { padding: 16px 12px; }
+    .header h1 { font-size: 24px; letter-spacing: 4px; }
+    .coin { width: 50px; height: 50px; font-size: 16px; }
+    .coins { gap: 10px; }
+    .yao-line { width: 150px; }
+    .yao-line .line-shape.yang,
+    .yao-line .line-shape.yin { width: 110px; }
+    .yao-line .yao-label-small { right: -28px; font-size: 10px; width: 28px; }
+    .toss-btn { padding: 10px 28px; font-size: 16px; }
+  }
+
+  /* ========== 隐藏辅助 ========== */
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<div class="container" id="app">
+  <!-- 标题 -->
+  <div class="header">
+    <h1>观 象</h1>
+    <div class="subtitle">— 六 爻 起 卦 —</div>
+  </div>
+
+  <!-- 摇卦区 -->
+  <div class="toss-area" id="tossArea">
+    <div class="step-info">
+      第 <span class="current" id="stepNum">一</span> 爻 &nbsp;|&nbsp;
+      共 <span id="totalSteps">六</span> 爻
+    </div>
+    <div class="coins" id="coinsContainer">
+      <div class="coin init" id="coin1"></div>
+      <div class="coin init" id="coin2"></div>
+      <div class="coin init" id="coin3"></div>
+    </div>
+    <button class="toss-btn" id="tossBtn">摇 卦</button>
+    <div class="line-result" id="lineResult"></div>
+  </div>
+
+  <!-- 卦象展示 -->
+  <div class="hexagram-area" id="hexagramArea">
+    <div class="hexagram-display" id="hexagramDisplay">
+      <div class="hexagram-title" id="hexagramTitle">点击摇卦开始</div>
+      <div id="hexagramLines"></div>
+    </div>
+  </div>
+
+  <!-- 解读区域 -->
+  <div class="reading-area hidden" id="readingArea">
+    <div class="reading-card" id="judgmentCard">
+      <div class="card-title">本 卦</div>
+      <div class="card-body" id="judgmentBody"></div>
+    </div>
+    <div id="changingLines"></div>
+    <div id="relatingHexagram"></div>
+    <!-- 白话解读 -->
+    <div class="reading-card hidden" id="baihuaCard">
+      <div class="card-title">📖 白 话 解 读</div>
+      <div class="card-body" id="baihuaBody"></div>
+    </div>
+    <!-- 典故案例 -->
+    <div class="reading-card hidden" id="storyCard">
+      <div class="card-title">📜 典 故 案 例</div>
+      <div class="card-body" id="storyBody"></div>
+    </div>
+    <!-- 防灾避祸 -->
+    <div class="reading-card hidden" id="disasterCard">
+      <div class="card-title">⚠️ 防 灾 避 祸</div>
+      <div class="card-body" id="disasterBody"></div>
+    </div>
+  </div>
+
+  <!-- 操作按钮 -->
+  <div class="actions" id="actionsArea">
+    <button class="primary" id="restartBtn" onclick="restart()">重新占卜</button>
+    <button id="historyBtn" onclick="toggleHistory()">卜卦记录</button>
+  </div>
+
+  <!-- 历史记录 -->
+  <div class="history-area">
+    <div class="history-list" id="historyList">
+      <div class="history-empty" id="historyEmpty">暂无记录</div>
+      <div id="historyItems"></div>
+      <button class="clear-history hidden" id="clearHistoryBtn" onclick="clearHistory()">清空记录</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ==========================================================
+// 1. 六十四卦完整数据
+// ==========================================================
+const HEXAGRAMS = [
+  { name:"乾", upper:"乾", lower:"乾", unicode:"䷀",
+    judgment:"乾，元，亨，利，贞。",
+    image:"天行健，君子以自强不息。",
+    meaning:"刚健不息，自强不息",
+    lines:[
+      "初九：潜龙勿用。",
+      "九二：见龙在田，利见大人。",
+      "九三：君子终日乾乾，夕惕若厉，无咎。",
+      "九四：或跃在渊，无咎。",
+      "九五：飞龙在天，利见大人。",
+      "上九：亢龙有悔。"
+    ]},
+  { name:"坤", upper:"坤", lower:"坤", unicode:"䷁",
+    judgment:"坤，元亨，利牝马之贞。君子有攸往，先迷后得主。西南得朋，东北丧朋。安贞吉。",
+    image:"地势坤，君子以厚德载物。",
+    meaning:"柔顺宽厚，厚德载物",
+    lines:[
+      "初六：履霜，坚冰至。",
+      "六二：直方大，不习无不利。",
+      "六三：含章可贞。或从王事，无成有终。",
+      "六四：括囊，无咎无誉。",
+      "六五：黄裳元吉。",
+      "上六：龙战于野，其血玄黄。"
+    ]},
+  { name:"屯", upper:"坎", lower:"震", unicode:"䷂",
+    judgment:"屯，元亨利贞。勿用有攸往，利建侯。",
+    image:"云雷屯，君子以经纶。",
+    meaning:"万事开头难，初生艰难",
+    lines:[
+      "初九：磐桓，利居贞，利建侯。",
+      "六二：屯如邅如，乘马班如。匪寇婚媾，女子贞不字，十年乃字。",
+      "六三：即鹿无虞，惟入于林中。君子几不如舍，往吝。",
+      "六四：乘马班如，求婚媾往吉，无不利。",
+      "九五：屯其膏，小贞吉，大贞凶。",
+      "上六：乘马班如，泣血涟如。"
+    ]},
+  { name:"蒙", upper:"艮", lower:"坎", unicode:"䷃",
+    judgment:"蒙，亨。匪我求童蒙，童蒙求我。初筮告，再三渎，渎则不告。利贞。",
+    image:"山下出泉，蒙。君子以果行育德。",
+    meaning:"蒙昧启蒙，需要教育引导",
+    lines:[
+      "初六：发蒙，利用刑人，用说桎梏，以往吝。",
+      "九二：包蒙吉，纳妇吉，子克家。",
+      "六三：勿用取女，见金夫，不有躬，无攸利。",
+      "六四：困蒙，吝。",
+      "六五：童蒙，吉。",
+      "上九：击蒙，不利为寇，利御寇。"
+    ]},
+  { name:"需", upper:"坎", lower:"乾", unicode:"䷄",
+    judgment:"需，有孚，光亨贞吉。利涉大川。",
+    image:"云上于天，需。君子以饮食宴乐。",
+    meaning:"等待时机，需待而动",
+    lines:[
+      "初九：需于郊，利用恒，无咎。",
+      "九二：需于沙，小有言，终吉。",
+      "九三：需于泥，致寇至。",
+      "六四：需于血，出自穴。",
+      "九五：需于酒食，贞吉。",
+      "上六：入于穴，有不速之客三人来，敬之终吉。"
+    ]},
+  { name:"讼", upper:"乾", lower:"坎", unicode:"䷅",
+    judgment:"讼，有孚窒惕，中吉，终凶。利见大人，不利涉大川。",
+    image:"天与水违行，讼。君子以作事谋始。",
+    meaning:"争讼，宜和解不宜争斗",
+    lines:[
+      "初六：不永所事，小有言，终吉。",
+      "九二：不克讼，归而逋其邑，人三百户，无眚。",
+      "六三：食旧德，贞厉，终吉。或从王事，无成。",
+      "九四：不克讼，复即命渝安，贞吉。",
+      "九五：讼元吉。",
+      "上九：或锡之鞶带，终朝三褫之。"
+    ]},
+  { name:"师", upper:"坤", lower:"坎", unicode:"䷆",
+    judgment:"师，贞，丈人吉，无咎。",
+    image:"地中有水，师。君子以容民畜众。",
+    meaning:"兴师动众，需纪律严明",
+    lines:[
+      "初六：师出以律，否藏凶。",
+      "九二：在师中吉，无咎，王三锡命。",
+      "六三：师或舆尸，凶。",
+      "六四：师左次，无咎。",
+      "六五：田有禽，利执言，无咎。长子帅师，弟子舆尸，贞凶。",
+      "上六：大君有命，开国承家，小人勿用。"
+    ]},
+  { name:"比", upper:"坎", lower:"坤", unicode:"䷇",
+    judgment:"比，吉。原筮元永贞，无咎。不宁方来，后夫凶。",
+    image:"地上有水，比。先王以建万国，亲诸侯。",
+    meaning:"亲比和睦，团结互助",
+    lines:[
+      "初六：有孚比之，无咎。有孚盈缶，终来有它吉。",
+      "六二：比之自内，贞吉。",
+      "六三：比之匪人。",
+      "六四：外比之，贞吉。",
+      "九五：显比，王用三驱，失前禽。邑人不诫，吉。",
+      "上六：比之无首，凶。"
+    ]},
+  { name:"小畜", upper:"巽", lower:"乾", unicode:"䷈",
+    judgment:"小畜，亨。密云不雨，自我西郊。",
+    image:"风行天上，小畜。君子以懿文德。",
+    meaning:"小有积蓄，蓄养力量",
+    lines:[
+      "初九：复自道，何其咎？吉。",
+      "九二：牵复吉。",
+      "九三：舆说辐，夫妻反目。",
+      "六四：有孚，血去惕出，无咎。",
+      "九五：有孚挛如，富以其邻。",
+      "上九：既雨既处，尚德载，妇贞厉。月几望，君子征凶。"
+    ]},
+  { name:"履", upper:"乾", lower:"兑", unicode:"䷉",
+    judgment:"履虎尾，不咥人，亨。",
+    image:"上天下泽，履。君子以辨上下，定民志。",
+    meaning:"如履薄冰，谨慎行事",
+    lines:[
+      "初九：素履往，无咎。",
+      "九二：履道坦坦，幽人贞吉。",
+      "六三：眇能视，跛能履，履虎尾咥人凶，武人为于大君。",
+      "九四：履虎尾，愬愬终吉。",
+      "九五：夬履，贞厉。",
+      "上九：视履考祥，其旋元吉。"
+    ]},
+  { name:"泰", upper:"坤", lower:"乾", unicode:"䷊",
+    judgment:"泰，小往大来，吉，亨。",
+    image:"天地交，泰。后以财成天地之道，辅相天地之宜。",
+    meaning:"通泰安泰，万事亨通",
+    lines:[
+      "初九：拔茅茹以其汇，征吉。",
+      "九二：包荒，用冯河。不遐遗，朋亡，得尚于中行。",
+      "九三：无平不陂，无往不复。艰贞无咎，勿恤其孚，于食有福。",
+      "六四：翩翩，不富以其邻，不戒以孚。",
+      "六五：帝乙归妹以祉，元吉。",
+      "上六：城复于隍，勿用师，自邑告命。贞吝。"
+    ]},
+  { name:"否", upper:"乾", lower:"坤", unicode:"䷋",
+    judgment:"否之匪人，不利君子贞，大往小来。",
+    image:"天地不交，否。君子以俭德辟难，不可荣以禄。",
+    meaning:"闭塞不通，守正待时",
+    lines:[
+      "初六：拔茅茹以其汇，贞吉亨。",
+      "六二：包承，小人吉，大人否亨。",
+      "六三：包羞。",
+      "九四：有命无咎，畴离祉。",
+      "九五：休否，大人吉。其亡其亡，系于苞桑。",
+      "上九：倾否，先否后喜。"
+    ]},
+  { name:"同人", upper:"乾", lower:"离", unicode:"䷌",
+    judgment:"同人于野，亨。利涉大川，利君子贞。",
+    image:"天与火，同人。君子以类族辨物。",
+    meaning:"与人和同，团结合作",
+    lines:[
+      "初九：同人于门，无咎。",
+      "六二：同人于宗，吝。",
+      "九三：伏戎于莽，升其高陵，三岁不兴。",
+      "九四：乘其墉，弗克攻，吉。",
+      "九五：同人先号咷而后笑，大师克相遇。",
+      "上九：同人于郊，无悔。"
+    ]},
+  { name:"大有", upper:"离", lower:"乾", unicode:"䷍",
+    judgment:"大有，元亨。",
+    image:"火在天上，大有。君子以遏恶扬善，顺天休命。",
+    meaning:"大有收获，光明昌盛",
+    lines:[
+      "初九：无交害，匪咎艰则无咎。",
+      "九二：大车以载，有攸往，无咎。",
+      "九三：公用亨于天子，小人弗克。",
+      "九四：匪其彭，无咎。",
+      "六五：厥孚交如威如，吉。",
+      "上九：自天祐之，吉无不利。"
+    ]},
+  { name:"谦", upper:"坤", lower:"艮", unicode:"䷎",
+    judgment:"谦，亨，君子有终。",
+    image:"地中有山，谦。君子以裒多益寡，称物平施。",
+    meaning:"谦虚谦逊，亨通吉祥",
+    lines:[
+      "初六：谦谦君子，用涉大川，吉。",
+      "六二：鸣谦，贞吉。",
+      "九三：劳谦，君子有终，吉。",
+      "六四：无不利，撝谦。",
+      "六五：不富以其邻，利用侵伐，无不利。",
+      "上六：鸣谦，利用行师，征邑国。"
+    ]},
+  { name:"豫", upper:"震", lower:"坤", unicode:"䷏",
+    judgment:"豫，利建侯行师。",
+    image:"雷出地奋，豫。先王以作乐崇德。",
+    meaning:"愉悦安乐，顺势而动",
+    lines:[
+      "初六：鸣豫，凶。",
+      "六二：介于石，不终日，贞吉。",
+      "六三：盱豫悔，迟有悔。",
+      "九四：由豫，大有得，勿疑朋盍簪。",
+      "六五：贞疾，恒不死。",
+      "上六：冥豫，成有渝，无咎。"
+    ]},
+  { name:"随", upper:"兑", lower:"震", unicode:"䷐",
+    judgment:"随，元亨利贞，无咎。",
+    image:"泽中有雷，随。君子以向晦入宴息。",
+    meaning:"随从跟随，择善而从",
+    lines:[
+      "初九：官有渝，贞吉，出门交有功。",
+      "六二：系小子，失丈夫。",
+      "六三：系丈夫，失小子。随有求得，利居贞。",
+      "九四：随有获，贞凶。有孚在道，以明何咎。",
+      "九五：孚于嘉，吉。",
+      "上六：拘系之，乃从维之，王用亨于西山。"
+    ]},
+  { name:"蛊", upper:"艮", lower:"巽", unicode:"䷑",
+    judgment:"蛊，元亨，利涉大川。先甲三日，后甲三日。",
+    image:"山下有风，蛊。君子以振民育德。",
+    meaning:"整治腐败，革新图治",
+    lines:[
+      "初六：干父之蛊，有子考无咎，厉终吉。",
+      "九二：干母之蛊，不可贞。",
+      "九三：干父之蛊，小有悔，无大咎。",
+      "六四：裕父之蛊，往见吝。",
+      "六五：干父之蛊，用誉。",
+      "上九：不事王侯，高尚其事。"
+    ]},
+  { name:"临", upper:"坤", lower:"兑", unicode:"䷒",
+    judgment:"临，元亨利贞。至于八月有凶。",
+    image:"泽上有地，临。君子以教思无穷，容保民无疆。",
+    meaning:"君临天下，以德服人",
+    lines:[
+      "初九：咸临，贞吉。",
+      "九二：咸临，吉无不利。",
+      "六三：甘临，无攸利，既忧之，无咎。",
+      "六四：至临，无咎。",
+      "六五：知临，大君之宜，吉。",
+      "上六：敦临，吉无咎。"
+    ]},
+  { name:"观", upper:"巽", lower:"坤", unicode:"䷓",
+    judgment:"观，盥而不荐，有孚颙若。",
+    image:"风行地上，观。先王以省方观民设教。",
+    meaning:"观察观望，审时度势",
+    lines:[
+      "初六：童观，小人无咎，君子吝。",
+      "六二：闚观，利女贞。",
+      "六三：观我生进退。",
+      "六四：观国之光，利用宾于王。",
+      "九五：观我生，君子无咎。",
+      "上九：观其生，君子无咎。"
+    ]},
+  { name:"噬嗑", upper:"离", lower:"震", unicode:"䷔",
+    judgment:"噬嗑，亨，利用狱。",
+    image:"雷电噬嗑，先王以明罚敕法。",
+    meaning:"咬合而通，去除障碍",
+    lines:[
+      "初九：屦校灭趾，无咎。",
+      "六二：噬肤灭鼻，无咎。",
+      "六三：噬腊肉遇毒，小吝无咎。",
+      "九四：噬干胏，得金矢，利艰贞吉。",
+      "六五：噬干肉，得黄金，贞厉无咎。",
+      "上九：何校灭耳，凶。"
+    ]},
+  { name:"贲", upper:"艮", lower:"离", unicode:"䷕",
+    judgment:"贲，亨，小利有攸往。",
+    image:"山下有火，贲。君子以明庶政，无敢折狱。",
+    meaning:"文饰装饰，以质为主",
+    lines:[
+      "初九：贲其趾，舍车而徒。",
+      "六二：贲其须。",
+      "九三：贲如濡如，永贞吉。",
+      "六四：贲如皤如，白马翰如，匪寇婚媾。",
+      "六五：贲于丘园，束帛戋戋，吝终吉。",
+      "上九：白贲，无咎。"
+    ]},
+  { name:"剥", upper:"艮", lower:"坤", unicode:"䷖",
+    judgment:"剥，不利有攸往。",
+    image:"山附于地，剥。上以厚下安宅。",
+    meaning:"剥落侵蚀，小人当道",
+    lines:[
+      "初六：剥床以足，蔑贞凶。",
+      "六二：剥床以辨，蔑贞凶。",
+      "六三：剥之无咎。",
+      "六四：剥床以肤，凶。",
+      "六五：贯鱼以宫人宠，无不利。",
+      "上九：硕果不食，君子得舆，小人剥庐。"
+    ]},
+  { name:"复", upper:"坤", lower:"震", unicode:"䷗",
+    judgment:"复，亨。出入无疾，朋来无咎。反复其道，七日来复，利有攸往。",
+    image:"雷在地中，复。先王以至日闭关，商旅不行。",
+    meaning:"回复复兴，生机重现",
+    lines:[
+      "初九：不远复，无祗悔，元吉。",
+      "六二：休复，吉。",
+      "六三：频复，厉无咎。",
+      "六四：中行独复。",
+      "六五：敦复，无悔。",
+      "上六：迷复凶，有灾眚。用行师终有大败。"
+    ]},
+  { name:"无妄", upper:"乾", lower:"震", unicode:"䷘",
+    judgment:"无妄，元亨利贞。其匪正有眚，不利有攸往。",
+    image:"天下雷行，物与无妄。先王以茂对时育万物。",
+    meaning:"不妄为，顺其自然",
+    lines:[
+      "初九：无妄往吉。",
+      "六二：不耕获，不菑畬，则利有攸往。",
+      "六三：无妄之灾，或系之牛，行人之得，邑人之灾。",
+      "九四：可贞无咎。",
+      "九五：无妄之疾，勿药有喜。",
+      "上九：无妄行有眚，无攸利。"
+    ]},
+  { name:"大畜", upper:"艮", lower:"乾", unicode:"䷙",
+    judgment:"大畜，利贞。不家食吉，利涉大川。",
+    image:"天在山中，大畜。君子以多识前言往行，以畜其德。",
+    meaning:"大积蓄，厚积薄发",
+    lines:[
+      "初九：有厉，利已。",
+      "九二：舆说輹。",
+      "九三：良马逐，利艰贞。曰闲舆卫，利有攸往。",
+      "六四：童牛之牿，元吉。",
+      "六五：豮豕之牙，吉。",
+      "上九：何天之衢，亨。"
+    ]},
+  { name:"颐", upper:"艮", lower:"震", unicode:"䷚",
+    judgment:"颐，贞吉。观颐，自求口实。",
+    image:"山下有雷，颐。君子以慎言语，节饮食。",
+    meaning:"颐养之道，自食其力",
+    lines:[
+      "初九：舍尔灵龟，观我朵颐，凶。",
+      "六二：颠颐，拂经于丘颐，征凶。",
+      "六三：拂颐，贞凶，十年勿用，无攸利。",
+      "六四：颠颐吉，虎视眈眈，其欲逐逐，无咎。",
+      "六五：拂经，居贞吉，不可涉大川。",
+      "上九：由颐，厉吉，利涉大川。"
+    ]},
+  { name:"大过", upper:"兑", lower:"巽", unicode:"䷛",
+    judgment:"大过，栋桡，利有攸往，亨。",
+    image:"泽灭木，大过。君子以独立不惧，遁世无闷。",
+    meaning:"过度非常，打破常规",
+    lines:[
+      "初六：藉用白茅，无咎。",
+      "九二：枯杨生稊，老夫得其女妻，无不利。",
+      "九三：栋桡凶。",
+      "九四：栋隆吉，有它吝。",
+      "九五：枯杨生华，老妇得其士夫，无咎无誉。",
+      "上六：过涉灭顶，凶无咎。"
+    ]},
+  { name:"坎", upper:"坎", lower:"坎", unicode:"䷜",
+    judgment:"习坎，有孚维心亨，行有尚。",
+    image:"水洊至，习坎。君子以常德行，习教事。",
+    meaning:"险陷重重，诚信通达",
+    lines:[
+      "初六：习坎，入于坎窞，凶。",
+      "九二：坎有险，求小得。",
+      "六三：来之坎坎，险且枕，入于坎窞，勿用。",
+      "六四：樽酒簋贰，用缶，纳约自牖，终无咎。",
+      "九五：坎不盈，祗既平，无咎。",
+      "上六：系用徽纆，置于丛棘，三岁不得，凶。"
+    ]},
+  { name:"离", upper:"离", lower:"离", unicode:"䷝",
+    judgment:"离，利贞，亨。畜牝牛吉。",
+    image:"明两作，离。大人以继明照于四方。",
+    meaning:"附丽光明，柔顺中正",
+    lines:[
+      "初九：履错然，敬之无咎。",
+      "六二：黄离，元吉。",
+      "九三：日昃之离，不鼓缶而歌，则大耋之嗟，凶。",
+      "九四：突如其来如，焚如死如弃如。",
+      "六五：出涕沱若，戚嗟若，吉。",
+      "上九：王用出征，有嘉折首，获匪其丑，无咎。"
+    ]},
+  { name:"咸", upper:"兑", lower:"艮", unicode:"䷞",
+    judgment:"咸，亨，利贞。取女吉。",
+    image:"山上有泽，咸。君子以虚受人。",
+    meaning:"交感感应，真诚感通",
+    lines:[
+      "初六：咸其拇。",
+      "六二：咸其腓，凶，居吉。",
+      "九三：咸其股，执其随，往吝。",
+      "九四：贞吉悔亡，憧憧往来，朋从尔思。",
+      "九五：咸其脢，无悔。",
+      "上六：咸其辅颊舌。"
+    ]},
+  { name:"恒", upper:"震", lower:"巽", unicode:"䷟",
+    judgment:"恒，亨，无咎，利贞，利有攸往。",
+    image:"雷风，恒。君子以立不易方。",
+    meaning:"恒久不变，持之以恒",
+    lines:[
+      "初六：浚恒，贞凶，无攸利。",
+      "九二：悔亡。",
+      "九三：不恒其德，或承之羞，贞吝。",
+      "九四：田无禽。",
+      "六五：恒其德，贞妇人吉，夫子凶。",
+      "上六：振恒，凶。"
+    ]},
+  { name:"遁", upper:"乾", lower:"艮", unicode:"䷠",
+    judgment:"遁，亨，小利贞。",
+    image:"天下有山，遁。君子以远小人，不恶而严。",
+    meaning:"退避隐退，以退为进",
+    lines:[
+      "初六：遁尾厉，勿用有攸往。",
+      "六二：执之用黄牛之革，莫之胜说。",
+      "九三：系遁，有疾厉，畜臣妾吉。",
+      "九四：好遁，君子吉，小人否。",
+      "九五：嘉遁，贞吉。",
+      "上九：肥遁，无不利。"
+    ]},
+  { name:"大壮", upper:"震", lower:"乾", unicode:"䷡",
+    judgment:"大壮，利贞。",
+    image:"雷在天上，大壮。君子以非礼弗履。",
+    meaning:"盛大强壮，守正勿用壮",
+    lines:[
+      "初九：壮于趾，征凶有孚。",
+      "九二：贞吉。",
+      "九三：小人用壮，君子用罔。羝羊触藩，羸其角。",
+      "九四：贞吉悔亡，藩决不羸，壮于大舆之輹。",
+      "六五：丧羊于易，无悔。",
+      "上六：羝羊触藩，不能退不能遂，无攸利，艰则吉。"
+    ]},
+  { name:"晋", upper:"离", lower:"坤", unicode:"䷢",
+    judgment:"晋，康侯用锡马蕃庶，昼日三接。",
+    image:"明出地上，晋。君子以自昭明德。",
+    meaning:"晋升上进，光明磊落",
+    lines:[
+      "初六：晋如摧如，贞吉。罔孚裕无咎。",
+      "六二：晋如愁如，贞吉。受兹介福于其王母。",
+      "六三：众允，悔亡。",
+      "九四：晋如鼫鼠，贞厉。",
+      "六五：悔亡，失得勿恤，往吉无不利。",
+      "上九：晋其角，维用伐邑，厉吉无咎，贞吝。"
+    ]},
+  { name:"明夷", upper:"坤", lower:"离", unicode:"䷣",
+    judgment:"明夷，利艰贞。",
+    image:"明入地中，明夷。君子以莅众，用晦而明。",
+    meaning:"光明受伤，晦暗守正",
+    lines:[
+      "初九：明夷于飞，垂其翼。君子于行，三日不食。有攸往，主人有言。",
+      "六二：明夷夷于左股，用拯马壮吉。",
+      "九三：明夷于南狩，得其大首，不可疾贞。",
+      "六四：入于左腹，获明夷之心，于出门庭。",
+      "六五：箕子之明夷，利贞。",
+      "上六：不明晦，初登于天，后入于地。"
+    ]},
+  { name:"家人", upper:"巽", lower:"离", unicode:"䷤",
+    judgment:"家人，利女贞。",
+    image:"风自火出，家人。君子以言有物而行有恒。",
+    meaning:"家庭伦理，家道兴旺",
+    lines:[
+      "初九：闲有家，悔亡。",
+      "六二：无攸遂，在中馈，贞吉。",
+      "九三：家人嗃嗃，悔厉吉；妇子嘻嘻，终吝。",
+      "六四：富家，大吉。",
+      "九五：王假有家，勿恤吉。",
+      "上九：有孚威如，终吉。"
+    ]},
+  { name:"睽", upper:"离", lower:"兑", unicode:"䷥",
+    judgment:"睽，小事吉。",
+    image:"上火下泽，睽。君子以同而异。",
+    meaning:"乖离睽违，求同存异",
+    lines:[
+      "初九：悔亡。丧马勿逐自复，见恶人无咎。",
+      "九二：遇主于巷，无咎。",
+      "六三：见舆曳，其牛掣，其人天且劓，无初有终。",
+      "九四：睽孤遇元夫，交孚厉无咎。",
+      "六五：悔亡，厥宗噬肤，往何咎。",
+      "上九：睽孤见豕负涂，载鬼一车，先张之弧后说之弧，匪寇婚媾，往遇雨则吉。"
+    ]},
+  { name:"蹇", upper:"坎", lower:"艮", unicode:"䷦",
+    judgment:"蹇，利西南，不利东北，利见大人，贞吉。",
+    image:"山上有水，蹇。君子以反身修德。",
+    meaning:"艰难险阻，反求诸己",
+    lines:[
+      "初六：往蹇来誉。",
+      "六二：王臣蹇蹇，匪躬之故。",
+      "九三：往蹇来反。",
+      "六四：往蹇来连。",
+      "九五：大蹇朋来。",
+      "上六：往蹇来硕吉，利见大人。"
+    ]},
+  { name:"解", upper:"震", lower:"坎", unicode:"䷧",
+    judgment:"解，利西南。无所往，其来复吉。有攸往，夙吉。",
+    image:"雷雨作，解。君子以赦过宥罪。",
+    meaning:"缓解解脱，排除困难",
+    lines:[
+      "初六：无咎。",
+      "九二：田获三狐，得黄矢，贞吉。",
+      "六三：负且乘，致寇至，贞吝。",
+      "九四：解而拇，朋至斯孚。",
+      "六五：君子维有解吉，有孚于小人。",
+      "上六：公用射隼于高墉之上，获之无不利。"
+    ]},
+  { name:"损", upper:"艮", lower:"兑", unicode:"䷨",
+    judgment:"损，有孚，元吉无咎可贞，利有攸往。曷之用？二簋可用享。",
+    image:"山下有泽，损。君子以惩忿窒欲。",
+    meaning:"减损克制，损有余补不足",
+    lines:[
+      "初九：已事遄往，无咎，酌损之。",
+      "九二：利贞，征凶，弗损益之。",
+      "六三：三人行则损一人，一人行则得其友。",
+      "六四：损其疾，使遄有喜，无咎。",
+      "六五：或益之十朋之龟，弗克违，元吉。",
+      "上九：弗损益之，无咎贞吉，利有攸往，得臣无家。"
+    ]},
+  { name:"益", upper:"巽", lower:"震", unicode:"䷩",
+    judgment:"益，利有攸往，利涉大川。",
+    image:"风雷，益。君子以见善则迁，有过则改。",
+    meaning:"增益利益，助人利他",
+    lines:[
+      "初九：利用为大作，元吉无咎。",
+      "六二：或益之十朋之龟，弗克违，永贞吉。王用享于帝吉。",
+      "六三：益之用凶事无咎，有孚中行，告公用圭。",
+      "六四：中行告公从，利用为依迁国。",
+      "九五：有孚惠心，勿问元吉，有孚惠我德。",
+      "上九：莫益之，或击之，立心勿恒凶。"
+    ]},
+  { name:"夬", upper:"兑", lower:"乾", unicode:"䷪",
+    judgment:"夬，扬于王庭，孚号有厉。告自邑，不利即戎，利有攸往。",
+    image:"泽上于天，夬。君子以施禄及下，居德则忌。",
+    meaning:"决断果决，当断则断",
+    lines:[
+      "初九：壮于前趾，往不胜为咎。",
+      "九二：惕号，莫夜有戎，勿恤。",
+      "九三：壮于頄有凶，君子夬夬独行，遇雨若濡有愠无咎。",
+      "九四：臀无肤，其行次且，牵羊悔亡，闻言不信。",
+      "九五：苋陆夬夬中行，无咎。",
+      "上六：无号，终有凶。"
+    ]},
+  { name:"姤", upper:"乾", lower:"巽", unicode:"䷫",
+    judgment:"姤，女壮，勿用取女。",
+    image:"天下有风，姤。后以施命诰四方。",
+    meaning:"意外相遇，守正防淫",
+    lines:[
+      "初六：系于金柅，贞吉。有攸往见凶，羸豕孚蹢躅。",
+      "九二：包有鱼，无咎，不利宾。",
+      "九三：臀无肤，其行次且，厉无大咎。",
+      "九四：包无鱼，起凶。",
+      "九五：以杞包瓜，含章，有陨自天。",
+      "上九：姤其角，吝无咎。"
+    ]},
+  { name:"萃", upper:"兑", lower:"坤", unicode:"䷬",
+    judgment:"萃，亨。王假有庙。利见大人，亨，利贞。用大牲吉，利有攸往。",
+    image:"泽上于地，萃。君子以除戎器，戒不虞。",
+    meaning:"聚集荟萃，团结一致",
+    lines:[
+      "初六：有孚不终，乃乱乃萃。若号一握为笑，勿恤往无咎。",
+      "六二：引吉无咎，孚乃利用禴。",
+      "六三：萃如嗟如，无攸利，往无咎小吝。",
+      "九四：大吉无咎。",
+      "九五：萃有位，无咎。匪孚元永贞，悔亡。",
+      "上六：赍咨涕洟，无咎。"
+    ]},
+  { name:"升", upper:"坤", lower:"巽", unicode:"䷭",
+    judgment:"升，元亨，用见大人，勿恤，南征吉。",
+    image:"地中生木，升。君子以顺德，积小以高大。",
+    meaning:"上升进升，积小成大",
+    lines:[
+      "初六：允升大吉。",
+      "九二：孚乃利用禴，无咎。",
+      "九三：升虚邑。",
+      "六四：王用亨于岐山，吉无咎。",
+      "六五：贞吉升阶。",
+      "上六：冥升，利于不息之贞。"
+    ]},
+  { name:"困", upper:"兑", lower:"坎", unicode:"䷮",
+    judgment:"困，亨，贞大人吉无咎。有言不信。",
+    image:"泽无水，困。君子以致命遂志。",
+    meaning:"穷困困境，守正不移",
+    lines:[
+      "初六：臀困于株木，入于幽谷，三岁不觌。",
+      "九二：困于酒食，朱绂方来，利用享祀，征凶无咎。",
+      "六三：困于石，据于蒺藜，入于其宫不见其妻，凶。",
+      "九四：来徐徐，困于金车，吝有终。",
+      "九五：劓刖，困于赤绂，乃徐有说，利用祭祀。",
+      "上六：困于葛藟，于臲卼，曰动悔有悔，征吉。"
+    ]},
+  { name:"井", upper:"坎", lower:"巽", unicode:"䷯",
+    judgment:"井，改邑不改井。无丧无得，往来井井。汔至亦未繘井，羸其瓶凶。",
+    image:"木上有水，井。君子以劳民劝相。",
+    meaning:"井养无穷，修德养民",
+    lines:[
+      "初六：井泥不食，旧井无禽。",
+      "九二：井谷射鲋，瓮敝漏。",
+      "九三：井渫不食，为我心恻，可用汲。王明并受其福。",
+      "六四：井甃无咎。",
+      "九五：井冽寒泉食。",
+      "上六：井收勿幕，有孚元吉。"
+    ]},
+  { name:"革", upper:"兑", lower:"离", unicode:"䷰",
+    judgment:"革，巳日乃孚，元亨利贞，悔亡。",
+    image:"泽中有火，革。君子以治历明时。",
+    meaning:"变革革命，除旧布新",
+    lines:[
+      "初九：巩用黄牛之革。",
+      "六二：巳日乃革之，征吉无咎。",
+      "九三：征凶贞厉，革言三就有孚。",
+      "九四：悔亡有孚，改命吉。",
+      "九五：大人虎变，未占有孚。",
+      "上六：君子豹变，小人革面，征凶居贞吉。"
+    ]},
+  { name:"鼎", upper:"离", lower:"巽", unicode:"䷱",
+    judgment:"鼎，元吉，亨。",
+    image:"木上有火，鼎。君子以正位凝命。",
+    meaning:"鼎立鼎新，革故鼎新",
+    lines:[
+      "初六：鼎颠趾，利出否。得妾以其子，无咎。",
+      "九二：鼎有实，我仇有疾，不我能即，吉。",
+      "九三：鼎耳革，其行塞，雉膏不食。方雨亏悔，终吉。",
+      "九四：鼎折足，覆公餗，其形渥，凶。",
+      "六五：鼎黄耳金铉，利贞。",
+      "上九：鼎玉铉，大吉无不利。"
+    ]},
+  { name:"震", upper:"震", lower:"震", unicode:"䷲",
+    judgment:"震，亨。震来虩虩，笑言哑哑，震惊百里，不丧匕鬯。",
+    image:"洊雷，震。君子以恐惧修省。",
+    meaning:"雷动震惊，处变不惊",
+    lines:[
+      "初九：震来虩虩，后笑言哑哑吉。",
+      "六二：震来厉，亿丧贝。跻于九陵，勿逐七日得。",
+      "六三：震苏苏，震行无眚。",
+      "九四：震遂泥。",
+      "六五：震往来厉，亿无丧有事。",
+      "上六：震索索，视矍矍，征凶。震不于其躬于其邻，无咎。婚媾有言。"
+    ]},
+  { name:"艮", upper:"艮", lower:"艮", unicode:"䷳",
+    judgment:"艮其背，不获其身，行其庭不见其人，无咎。",
+    image:"兼山，艮。君子以思不出其位。",
+    meaning:"适可而止，知止不殆",
+    lines:[
+      "初六：艮其趾，无咎利永贞。",
+      "六二：艮其腓，不拯其随，其心不快。",
+      "九三：艮其限，列其夤，厉熏心。",
+      "六四：艮其身，无咎。",
+      "六五：艮其辅，言有序，悔亡。",
+      "上九：敦艮吉。"
+    ]},
+  { name:"渐", upper:"巽", lower:"艮", unicode:"䷴",
+    judgment:"渐，女归吉，利贞。",
+    image:"山上有木，渐。君子以居贤德善俗。",
+    meaning:"循序渐进，不可冒进",
+    lines:[
+      "初六：鸿渐于干，小子厉有言无咎。",
+      "六二：鸿渐于磐，饮食衎衎吉。",
+      "九三：鸿渐于陆，夫征不复，妇孕不育凶，利御寇。",
+      "六四：鸿渐于木，或得其桷，无咎。",
+      "九五：鸿渐于陵，妇三岁不孕，终莫之胜吉。",
+      "上九：鸿渐于陆，其羽可用为仪吉。"
+    ]},
+  { name:"归妹", upper:"震", lower:"兑", unicode:"䷵",
+    judgment:"归妹，征凶，无攸利。",
+    image:"泽上有雷，归妹。君子以永终知敝。",
+    meaning:"少女出嫁，须依礼而行",
+    lines:[
+      "初九：归妹以娣，跛能履，征吉。",
+      "九二：眇能视，利幽人之贞。",
+      "六三：归妹以须，反归以娣。",
+      "九四：归妹愆期，迟归有时。",
+      "六五：帝乙归妹，其君之袂不如其娣之袂良。月几望吉。",
+      "上六：女承筐无实，士刲羊无血，无攸利。"
+    ]},
+  { name:"丰", upper:"震", lower:"离", unicode:"䷶",
+    judgment:"丰，亨。王假之，勿忧，宜日中。",
+    image:"雷电皆至，丰。君子以折狱致刑。",
+    meaning:"丰大丰满，盛极防衰",
+    lines:[
+      "初九：遇其配主，虽旬无咎，往有尚。",
+      "六二：丰其蔀，日中见斗。往得疑疾，有孚发若吉。",
+      "九三：丰其沛，日中见沬，折其右肱，无咎。",
+      "九四：丰其蔀，日中见斗，遇其夷主吉。",
+      "六五：来章有庆誉吉。",
+      "上六：丰其屋，蔀其家，窥其户，阒其无人，三岁不觌凶。"
+    ]},
+  { name:"旅", upper:"离", lower:"艮", unicode:"䷷",
+    judgment:"旅，小亨，旅贞吉。",
+    image:"山上有火，旅。君子以明慎用刑而不留狱。",
+    meaning:"行旅在外，漂泊不定",
+    lines:[
+      "初六：旅琐琐，斯其所取灾。",
+      "六二：旅即次，怀其资，得童仆贞。",
+      "九三：旅焚其次，丧其童仆，贞厉。",
+      "九四：旅于处，得其资斧，我心不快。",
+      "六五：射雉一矢亡，终以誉命。",
+      "上九：鸟焚其巢，旅人先笑后号咷，丧牛于易凶。"
+    ]},
+  { name:"巽", upper:"巽", lower:"巽", unicode:"䷸",
+    judgment:"巽，小亨，利有攸往，利见大人。",
+    image:"随风，巽。君子以申命行事。",
+    meaning:"柔顺谦逊，风行草偃",
+    lines:[
+      "初六：进退，利武人之贞。",
+      "九二：巽在床下，用史巫纷若吉无咎。",
+      "九三：频巽吝。",
+      "六四：悔亡，田获三品。",
+      "九五：贞吉悔亡无不利，无初有终。先庚三日后庚三日吉。",
+      "上九：巽在床下，丧其资斧，贞凶。"
+    ]},
+  { name:"兑", upper:"兑", lower:"兑", unicode:"䷹",
+    judgment:"兑，亨，利贞。",
+    image:"丽泽，兑。君子以朋友讲习。",
+    meaning:"喜悦欣悦，以诚相待",
+    lines:[
+      "初九：和兑吉。",
+      "九二：孚兑吉，悔亡。",
+      "六三：来兑凶。",
+      "九四：商兑未宁，介疾有喜。",
+      "九五：孚于剥，有厉。",
+      "上六：引兑。"
+    ]},
+  { name:"涣", upper:"巽", lower:"坎", unicode:"䷺",
+    judgment:"涣，亨。王假有庙，利涉大川，利贞。",
+    image:"风行水上，涣。先王以享于帝立庙。",
+    meaning:"涣散离散，聚散相依",
+    lines:[
+      "初六：用拯马壮吉。",
+      "九二：涣奔其机，悔亡。",
+      "六三：涣其躬，无悔。",
+      "六四：涣其群元吉，涣有丘，匪夷所思。",
+      "九五：涣汗其大号，涣王居无咎。",
+      "上九：涣其血去逖出，无咎。"
+    ]},
+  { name:"节", upper:"坎", lower:"兑", unicode:"䷻",
+    judgment:"节，亨，苦节不可贞。",
+    image:"泽上有水，节。君子以制数度，议德行。",
+    meaning:"节制节度，适度而行",
+    lines:[
+      "初九：不出户庭，无咎。",
+      "九二：不出门庭，凶。",
+      "六三：不节若则嗟若，无咎。",
+      "六四：安节亨。",
+      "九五：甘节吉，往有尚。",
+      "上六：苦节，贞凶悔亡。"
+    ]},
+  { name:"中孚", upper:"巽", lower:"兑", unicode:"䷼",
+    judgment:"中孚，豚鱼吉。利涉大川，利贞。",
+    image:"泽上有风，中孚。君子以议狱缓死。",
+    meaning:"中心诚信，诚信感通",
+    lines:[
+      "初九：虞吉，有它不燕。",
+      "九二：鸣鹤在阴，其子和之。我有好爵，吾与尔靡之。",
+      "六三：得敌，或鼓或罢，或泣或歌。",
+      "六四：月几望，马匹亡，无咎。",
+      "九五：有孚挛如，无咎。",
+      "上九：翰音登于天，贞凶。"
+    ]},
+  { name:"小过", upper:"震", lower:"艮", unicode:"䷽",
+    judgment:"小过，亨，利贞。可小事不可大事。飞鸟遗之音，不宜上宜下，大吉。",
+    image:"山上有雷，小过。君子以行过乎恭，丧过乎哀，用过乎俭。",
+    meaning:"小有过失，宜柔不宜刚",
+    lines:[
+      "初六：飞鸟以凶。",
+      "六二：过其祖，遇其妣。不及其君，遇其臣，无咎。",
+      "九三：弗过防之，从或戕之，凶。",
+      "九四：无咎，弗过遇之。往厉必戒，勿用永贞。",
+      "六五：密云不雨，自我西郊。公弋取彼在穴。",
+      "上六：弗遇过之，飞鸟离之凶，是谓灾眚。"
+    ]},
+  { name:"既济", upper:"坎", lower:"离", unicode:"䷾",
+    judgment:"既济，亨小，利贞。初吉终乱。",
+    image:"水在火上，既济。君子以思患而豫防之。",
+    meaning:"已经成功，守成不易",
+    lines:[
+      "初九：曳其轮，濡其尾，无咎。",
+      "六二：妇丧其茀，勿逐七日得。",
+      "九三：高宗伐鬼方，三年克之，小人勿用。",
+      "六四：繻有衣袽，终日戒。",
+      "九五：东邻杀牛不如西邻之禴祭，实受其福。",
+      "上六：濡其首，厉。"
+    ]},
+  { name:"未济", upper:"离", lower:"坎", unicode:"䷿",
+    judgment:"未济，亨。小狐汔济，濡其尾，无攸利。",
+    image:"火在水上，未济。君子以慎辨物居方。",
+    meaning:"尚未成功，再接再厉",
+    lines:[
+      "初六：濡其尾，吝。",
+      "九二：曳其轮，贞吉。",
+      "六三：未济征凶，利涉大川。",
+      "九四：贞吉悔亡，震用伐鬼方，三年有赏于大国。",
+      "六五：贞吉无悔，君子之光有孚吉。",
+      "上九：有孚于饮酒无咎，濡其首有孚失是。"
+    ]}
+];
+
+// ==========================================================
+// 2a. 六十四卦分类解读（时运、财运、家宅、身体、婚恋、学业、事业、出行、官司、求职、投资）
+// 各条目引用《周易》《彖传》《象传》《系辞》《说卦》《文言》等经典
+// ==========================================================
+const HEXAGRAM_CATEGORIES = {
+  "乾": { shiyun:"《象传》云：'天行健，君子以自强不息。'运势强盛但切忌骄傲", caiyun:"《文言》曰：'元者善之长也，亨者嘉之会也。'施比受有福", jiazhai:"《坤·文言》：'积善之家，必有余庆。'家运昌隆", shenti:"《说卦》：'乾为首。'保健有恒，注意头部肺部", hunlian:"《彖传》：'乾道变化，各正性命。'阳盛阴衰，刚柔相济可成", xueye:"《文言》：'君子学以聚之，问以辨之。'大吉大利", shiye:"《系辞》：'举而措之天下之民，谓之事业。'奋发有为可成大业", chuxing:"乾为健行，远行无阻。九三'君子终日乾乾'，出行谨慎则吉", guansi:"《讼卦》：'惕中吉，终凶。'乾卦刚健，不宜诉讼", qiuzhi:"九二：'见龙在田，利见大人。'求职有望，宜主动进取", touzi:"《系辞》：'富有之谓大业，日新之谓盛德。'宜稳健投资" },
+  "坤": { shiyun:"《象传》：'地势坤，君子以厚德载物。'为人厚道声名远传", caiyun:"《彖传》：'坤厚载物，德合无疆。'满载而归，宜土中之利", jiazhai:"《文言》：'坤至柔而动也刚。'家庭安稳，多阴气宜调和", shenti:"《说卦》：'坤为腹。'注意腹疾脾胃之疾，宜柔软运动", hunlian:"《彖传》：'西南得朋，乃与类行。'宜婚姻，以柔克刚", xueye:"六二：'直方大，不习无不利。'踏实积累，不可急于求成", shiye:"《象传》：'厚德载物。'以柔克刚，事业宜守成不宜开创", chuxing:"坤为地，利西南行。'先迷后得主'，出行宜随众", guansi:"坤德柔顺，《讼》不利。宜和解息事，不可争强", qiuzhi:"六五：'黄裳元吉。'以柔顺之德求职，可得贵人相助", touzi:"坤为地，地产之利可图。宜长线持有，不宜短线投机" },
+  "屯": { shiyun:"《彖传》：'屯，刚柔始交而难生。'多事多难，须坚忍奋斗", caiyun:"初九：'磐桓，利居贞。'创业初期步履艰难，宜守不宜进", jiazhai:"《象传》：'云雷屯，君子以经纶。'先劳苦后繁荣", shenti:"《说卦》：'坎为耳，震为足。'注意耳鼻心脏肾脏", hunlian:"《屯》六二：'乘马班如，匪寇婚媾。'好事多磨，贞洁可成", xueye:"《屯》'利建侯'，宜从师求学，持之以恒方有成就", shiye:"《彖传》：'动乎险中，大亨贞。'创业维艰，坚忍不拔可成", chuxing:"六二'屯如邅如'，出行多阻。'利建侯'宜结伴而行", guansi:"屯卦险中求动，非争讼之时。宜忍让平息", qiuzhi:"初九'利居贞，利建侯'，宜从基层做起，稳扎稳打", touzi:"屯者物之始生，投资初期宜谨慎，不可贪大求快" },
+  "蒙": { shiyun:"《彖传》：'蒙，山下有险，险而止。'运不高，宜学习成长", caiyun:"《蒙》九二：'包蒙吉，纳妇吉。'谋望求财枉徒劳，不宜冒进", jiazhai:"九二'子克家'，家业可由后辈振兴，目前宜忍耐", shenti:"《说卦》：'艮为手，坎为水。'注意饮食停滞消化不良", hunlian:"六三：'勿用取女，见金夫不有躬。'注意对方品德", xueye:"《彖传》：'匪我求童蒙，童蒙求我。'虚心受教，尊师重道", shiye:"《象传》：'山下出泉，蒙。'事业刚起步如泉水初出，宜培养根基", chuxing:"初六'利用刑人，用说桎梏'，出行有阻宜谨慎", guansi:"蒙卦有启蒙之义，遇讼宜请教长者，不可自专", qiuzhi:"童蒙求我，求职宜主动求知，以诚意打动对方", touzi:"蒙昧不明，不利投资。宜学习积累，待机而动" },
+  "需": { shiyun:"《彖传》：'需，须也，险在前也。'时机未到，耐心等待", caiyun:"《需》九五：'需于酒食，贞吉。'资本未集，贪小利必败", jiazhai:"《象传》：'云上于天，需。君子以饮食宴乐。'平安是福", shenti:"《说卦》：'坎为水。'注意肠胃血液之疾，调节饮食", hunlian:"《需》六四：'需于血，出自穴。'慎重培养感情，不可草率", xueye:"《象传》：'饮食宴乐。'寓教于乐，耐心积累知识", shiye:"《彖传》：'需，有孚，光亨。'事业待时，诚信可获光明", chuxing:"初九'需于郊'，远行宜备充分。'利涉大川'，险中可渡", guansi:"需有等待之义，遇讼宜缓不宜急，待时机自明", qiuzhi:"九五'需于酒食'，求职宜托关系引荐，耐心等候", touzi:"需卦有孚，投资宜选稳健项目，等待时机入场" },
+  "讼": { shiyun:"《彖传》：'讼，上刚下险，险而健。'凡事障碍，宜和解", caiyun:"《讼》九四：'不克讼，复即命渝安贞吉。'失当致损", jiazhai:"《象传》：'天与水违行，讼。'家庭失和，须防口舌", shenti:"《说卦》：'乾为首，坎为耳。'注意脑肺肾循环疾病", hunlian:"《讼》'惕中吉，终凶'，婚姻不吉，对方不够诚意", xueye:"《讼》初六：'不永所事，小有言，终吉。'宜慎重决策", shiye:"《象传》：'君子以作事谋始。'事业慎始，避免纠纷", chuxing:"讼卦不利涉大川，出行恐有纠纷，不宜远行", guansi:"九五：'讼元吉。'讼事有贵人助，但以和解为上", qiuzhi:"《讼》'利见大人'，求职须经公正渠道，不可行私", touzi:"《讼》'不利涉大川'，投资有风险，宜谨慎评估" },
+  "师": { shiyun:"《彖传》：'师，众也，贞正也。'行险而顺，阻力大可成", caiyun:"《师》六五：'田有禽，利执言。'积蓄充足可大举营销", jiazhai:"《象传》：'地中有水，师。君子以容民畜众。'注意安全", shenti:"《说卦》：'坤为地，坎为水。'注意调养不宜过劳", hunlian:"《师》九二：'在师中吉。'慎重专注，痴情可达成", xueye:"《师》初六：'师出以律。'学业需规矩刻苦，师长提携", shiye:"《彖传》：'行险而顺。'事业如行军，纪律严明则可胜", chuxing:"师卦行险，出行须从正道。六四'师左次'，退守为吉", guansi:"师有征伐之义，官司有力者胜，宜请强援", qiuzhi:"师卦'丈人吉'，求职宜找德高望重者引荐", touzi:"师出有名，投资需有明确目标和充分准备" },
+  "比": { shiyun:"《彖传》：'比，吉也。比，辅也。'顺风行船万事如意", caiyun:"《比》九五：'显比，王用三驱。'交易求财大得利", jiazhai:"《象传》：'地上有水，比。'家宅平安和睦相处", shenti:"《比》初六：'有孚盈缶。'疾病大好，康复可期", hunlian:"《比》六二：'比之自内，贞吉。'美好姻缘彼此忠诚", xueye:"《比》六四：'外比之贞吉。'广交贤友，学业进步", shiye:"《彖传》：'比，辅也。'事业宜合作共赢，亲附有道", chuxing:"《比》'不宁方来'，出行得友相助，旅途顺利", guansi:"比卦亲和，遇讼宜求和。九五'失前禽'，不宜穷追", qiuzhi:"《比》'原筮元永贞'，求职宜经熟人推荐", touzi:"比卦有亲附之义，投资宜跟从可靠伙伴" },
+  "小畜": { shiyun:"《彖传》：'小畜，柔得位而上下应之。'蓄养待进", caiyun:"《小畜》'密云不雨'，交易出行空费力，不宜急进", jiazhai:"《象传》：'风行天上，小畜。君子以懿文德。'忍耐从容", shenti:"《小畜》九三：'舆说辐，夫妻反目。'注意口舌调养", hunlian:"九三'夫妻反目'，防第三者插足，需双方忠诚", xueye:"《象传》：'懿文德。'小有成就，继续积累方大成", shiye:"《彖传》：'健而巽，刚中而志行。'蓄积力量，待机而发", chuxing:"《小畜》'密云不雨'，出行恐有耽搁", guansi:"小畜之讼，以和为主。六四'有孚血去惕出'", qiuzhi:"小畜量力而行，求职宜先充实自身能力再做打算", touzi:"小畜有积蓄之义，宜小额投资，量力而行" },
+  "履": { shiyun:"《彖传》：'履，柔履刚也。'俊鸟出笼，如履薄冰而亨", caiyun:"《履》九二：'履道坦坦，幽人贞吉。'买卖兴旺谨慎获利", jiazhai:"《象传》：'上天下泽，履。君子以辨上下。'初艰后安", shenti:"《说卦》：'兑为口，乾为首。'注意脑病肺病勿紧张", hunlian:"六三：'履虎尾咥人凶。'虽有挫折持久可成", xueye:"《履》初九：'素履往无咎。'质朴求学，谨慎可成", shiye:"《彖传》：'履虎尾，不咥人亨。'事业如履薄冰，谨慎则吉", chuxing:"履卦'履虎尾'，出行须格外小心，以防意外", guansi:"九四：'履虎尾，愬愬终吉。'遇讼恐惧谨慎终吉", qiuzhi:"初九'素履往'，求职宜以朴实真诚打动对方", touzi:"履道坦坦，投资宜走正道稳健获利，不可投机" },
+  "泰": { shiyun:"《彖传》：'泰，小往大来，吉亨。'喜报三元万事亨通", caiyun:"《泰》九二：'包荒用冯河。'谋望求财大吉祥", jiazhai:"《象传》：'天地交，泰。'感情融洽家运兴隆", shenti:"《泰》九三：'无平不陂，无往不复。'注意消化器", hunlian:"《泰》六五：'帝乙归妹以祉元吉。'情投意合大吉", xueye:"《泰》初九：'拔茅茹以其汇。'学业通达考试顺利", shiye:"《彖传》：'天地交而万物通。'事业顺遂通达", chuxing:"《泰》'小往大来'，出行往返皆利", guansi:"泰卦通泰，遇讼可和解。九三'艰贞无咎'", qiuzhi:"《泰》'拔茅茹以其汇'，求职宜成群结队共同应聘", touzi:"泰者通也，投资环境良好，宜大胆出手" },
+  "否": { shiyun:"《彖传》：'否，天地不交。'虎落陷坑气运不通", caiyun:"《否》六二：'包承，小人吉。'占财可成但事事晚", jiazhai:"《象传》：'天地不交，否。'家运倾衰宜忍耐", shenti:"《否》六三：'包羞。'注意内脏机能障碍", hunlian:"《否》'不利君子贞'，性格不和不易成", xueye:"《否》初六：'拔茅茹以其汇贞吉。'暂时困难终好转", shiye:"《象传》：'俭德辟难。'事业闭塞，宜保守勿进", chuxing:"否卦不利出行，路有险阻。宜静不宜动", guansi:"九五：'休否大人吉'。讼事宜休，待时再举", qiuzhi:"否运求职艰难，宜暂守旧位，充实自身后再图", touzi:"否塞不通，不利投资。守正待时，不可妄动" },
+  "同人": { shiyun:"《彖传》：'同人，柔得位而应乎乾。'与人合作大吉", caiyun:"《同人》'利涉大川'，交易求财不费力", jiazhai:"《象传》：'天与火，同人。'人际关系和谐", shenti:"《同人》九五：'先号咷而后笑。'身心康泰", hunlian:"《同人》六二：'同人于宗吝。'多情善交际", xueye:"《同人》'同人于野亨'，与同学志同道合", shiye:"《彖传》：'与人同，物亦同。'事业宜合作共赢", chuxing:"《同人》'利涉大川'，出行结伴最吉", guansi:"同人卦与人合同，讼事宜求众人公议化解", qiuzhi:"《同人》'同人于门'，求职宜经朋友同事介绍", touzi:"同人者与人和同，投资宜合伙经营" },
+  "大有": { shiyun:"《彖传》：'大有，柔得尊位。'气运亨通众望所归", caiyun:"《大有》九二：'大车以载。'求财到处自有", jiazhai:"《象传》：'火在天上，大有。'富贵之家运昌隆", shenti:"《说卦》：'离为目，乾为首。'注意胸部头部", hunlian:"《大有》六五：'厥孚交如威如吉。'条件优越", xueye:"《大有》'自天祐之吉无不利'，学业有成", shiye:"《彖传》：'刚健而文明。'事业大有所成", chuxing:"《大有》'利涉大川'，出行通达无阻", guansi:"《大有》九四：'匪其彭无咎'，讼事可消", qiuzhi:"《大有》初九：'无交害匪咎'，求职顺利", touzi:"大有者丰盛之时，投资正当其时，必有收获" },
+  "谦": { shiyun:"《彖传》：'谦亨，天道下济而光明。'谋望遂心", caiyun:"《谦》六四：'无不利，撝谦。'交易合伙皆利", jiazhai:"《象传》：'地中有山，谦。'家宅平安出外得地", shenti:"《谦》初六：'谦谦君子。'疾病安宁康复可期", hunlian:"《谦》九三：'劳谦君子有终。'婚姻遂意", xueye:"《谦》'鸣谦贞吉'，谦虚好学学业有成", shiye:"《彖传》：'天道亏盈而益谦。'谦虚处世事业可成", chuxing:"《谦》'利涉大川'，出行谦让则旅途平安", guansi:"谦卦退让，遇讼宜让步。上六'利用行师征邑国'", qiuzhi:"谦谦君子，求职以谦虚态度最讨喜", touzi:"谦受益满招损，投资宜知止知足" },
+  "豫": { shiyun:"《彖传》：'豫，刚应而志行。'青龙得意顺势而为", caiyun:"《豫》九四：'由豫大有得。'谋望求财事有成", jiazhai:"《象传》：'雷出地奋，豫。'家宅安康", shenti:"《豫》六二：'介于石不终日。'口舌安宁身心愉悦", hunlian:"《豫》'利建侯行师'，顺利但不可玩弄感情", xueye:"《豫》六三：'盱豫悔迟有悔'，乐学效率高", shiye:"《彖传》：'豫，顺以动。'事业顺势而为大有可为", chuxing:"《豫》'利建侯行师'，出行宜团体行动", guansi:"豫卦愉悦，遇讼宜悦服对方，六五'贞疾恒不死'", qiuzhi:"《豫》九四'朋盍簪'，求职宜靠朋友引荐", touzi:"豫者乐也，投资有获利之喜，宜随大趋势" },
+  "随": { shiyun:"《彖传》：'随，刚来而下柔。'苦极生荣随势而为", caiyun:"《随》'元亨利贞'，谋望求财不费难", jiazhai:"《象传》：'泽中有雷，随。'家宅平安", shenti:"《随》'元亨利贞无咎'，疾病口舌保平安", hunlian:"《随》六二：'系小子失丈夫'，情投意合可成", xueye:"《随》初九：'官有渝贞吉'，择善而从学习进步", shiye:"《彖传》：'随时之义大矣哉。'事业宜顺势而为", chuxing:"《随》上六'王用亨于西山'，出行吉利", guansi:"随卦有随从义，讼事宜随顺调解", qiuzhi:"《随》'出门交有功'，求职宜主动出击", touzi:"随势而行，投资宜跟风但有度" },
+  "蛊": { shiyun:"《彖传》：'蛊，刚上而柔下。'顺当为福反为祸", caiyun:"《蛊》'元亨'，但守旧则损，宜改行", jiazhai:"《象传》：'山下有风，蛊。'宜整顿家风", shenti:"《说卦》：'巽为风，艮为止。'注意内脏", hunlian:"《蛊》九二：'干母之蛊不可贞'，烦恼多", xueye:"《蛊》初六：'干父之蛊有子'，需革新方法", shiye:"《彖传》：'蛊，坏而治之。'事业遇弊宜整顿革新", chuxing:"蛊卦腐坏之象，出行须防车船故障", guansi:"蛊者事物败坏，讼事难清，宜和解免累", qiuzhi:"蛊卦有整治之义，求职宜找能发挥所长之处", touzi:"蛊有虫蚀之义，投资小心中毒受损" },
+  "临": { shiyun:"《彖传》：'临，刚浸而长。'发政施仁志量高", caiyun:"《临》初九：'咸临贞吉'，出外求财任逍遥", jiazhai:"《象传》：'泽上有地，临。'家宅平安吉庆临门", shenti:"《临》六四：'至临无咎'，疾病即愈康复在望", hunlian:"《临》六五：'知临大君之宜'，婚姻大有意", xueye:"《临》上六：'敦临吉'，学业临门有望", shiye:"《彖传》：'临，君临天下。'事业有领导之象", chuxing:"《临》初九'咸临贞吉'，出行宜有目标", guansi:"临卦居高临下，讼事有利", qiuzhi:"《临》'至临无咎'，求职宜亲临面谈", touzi:"临者大也，投资宜看准大趋势果断进场" },
+  "观": { shiyun:"《彖传》：'观，大观在上。'鹊遇天晚先难后易", caiyun:"《观》六四：'观国之光。'生意买卖利息多", jiazhai:"《象传》：'风行地上，观。'小心谨慎家宅安稳", shenti:"《观》初六：'童观小人无咎'，疾病皆除", hunlian:"《观》六二：'窥观利女贞'，婚姻有人助", xueye:"《观》九五：'观我生君子无咎'，善于观察思考", shiye:"《彖传》：'观天之神道而四时不忒。'事业宜审时度势", chuxing:"《观》'观国之光'，出行宜考察市场", guansi:"观卦有观望之义，讼事宜观望再动", qiuzhi:"《观》'观我生进退'，求职宜审度自身定位", touzi:"观卦宜观察，投资需周详调研后再行动" },
+  "噬嗑": { shiyun:"《彖传》：'噬嗑，柔得中而上行。'遇阻碍可破", caiyun:"《噬嗑》'亨利用狱'，去除障碍可得利", jiazhai:"《象传》：'雷电噬嗑。'去旧弊家宅平安", shenti:"《说卦》：'离为目，震为足。'注意口腔咽喉", hunlian:"《噬嗑》'亨利用狱'，去除隔阂婚姻可成", xueye:"《噬嗑》初九：'屦校灭趾无咎'，克服困难可成", shiye:"《彖传》：'刚柔分，动而明。'破旧立新事业可成", chuxing:"《噬嗑》九四'利艰贞吉'，出行宜备艰辛", guansi:"《噬嗑》'利用狱'，诉讼有利但宜速决", qiuzhi:"噬嗑有咬合义，求职需坚韧不拔攻克难关", touzi:"《噬嗑》去障得利，投资宜清理旧务再进场" },
+  "贲": { shiyun:"《彖传》：'贲亨，柔来而文刚。'文饰外表宜适度", caiyun:"《贲》六五：'贲于丘园。'物价高涨可成功", jiazhai:"《象传》：'山下有火，贲。'外表虚张内穷困", shenti:"《说卦》：'离为目，艮为手。'注意腺病胸病", hunlian:"《贲》初九：'贲其趾舍车而徒'，不可只看外表", xueye:"《贲》上九：'白贲无咎'，装饰文采需内在实在", shiye:"《彖传》：'观乎人文以化成天下。'事业宜重实质", chuxing:"《贲》'舍车而徒'，出行简朴，不必奢华", guansi:"贲为文饰，讼事虚而不实，宜揭真相", qiuzhi:"贲卦重表，求职需注意形象但更要真才实学", touzi:"贲者饰也，投资防虚高价格" },
+  "剥": { shiyun:"《彖传》：'剥，剥也，柔变刚也。'剥极而复", caiyun:"《剥》六五：'贯鱼以宫人宠'，利防小人", jiazhai:"《象传》：'山附于地，剥。'阴盛阳衰家不安", shenti:"《剥》初六：'剥床以足。'注意身体虚弱", hunlian:"《剥》六二：'剥床以辨'，防小人破坏", xueye:"《剥》上九：'硕果不食。'有起伏坚持有收获", shiye:"《彖传》：'不利有攸往。'事业宜守不宜进", chuxing:"剥卦不利出行，'不利有攸往'，宜静守", guansi:"剥卦剥落，讼事宜防小人作祟", qiuzhi:"剥运不利求职，宜保旧位以待时变", touzi:"剥蚀之象，投资严防损失" },
+  "复": { shiyun:"《彖传》：'复亨，刚反。'交节换月自然安宁", caiyun:"《复》'七日来复'，一阳来复有利可图", jiazhai:"《象传》：'雷在地中，复。'家运渐露曙光", shenti:"《复》'出入无疾'，注意肠胃神经", hunlian:"《复》六二：'休复吉'，按部就班可成", xueye:"《复》初九：'不远复无祗悔'，温故知新渐进", shiye:"《彖传》：'复则亨。'事业复兴，向阳而生", chuxing:"《复》'出入无疾'，出行顺利", guansi:"复卦回复，讼事可反复申辩求公正", qiuzhi:"复者回复，求职宜回访旧处", touzi:"复卦一阳来复，投资市场回暖可入" },
+  "无妄": { shiyun:"《彖传》：'无妄，刚自外来而为主于内。'退守为吉", caiyun:"《无妄》'不利有攸往'，谋望求财不定准", jiazhai:"《象传》：'天下雷行，物与无妄。'家宅幸福", shenti:"《说卦》：'乾为首，震为足。'注意呼吸神经", hunlian:"《无妄》九五：'无妄之疾勿药有喜'，至诚则成", xueye:"《无妄》初九：'无妄往吉'，诚实学习不可投机", shiye:"《彖传》：'天命不祐，行矣哉。'事业宜守正", chuxing:"《无妄》六三'行人之得'，出行有意外之得", guansi:"无妄卦主意外，讼事有意外转折", qiuzhi:"无妄之往吉，求职顺其自然可成", touzi:"无妄勿贪意外之财，投资宜本分" },
+  "大畜": { shiyun:"《彖传》：'大畜，刚健笃实辉光。'忧愁从此打开", caiyun:"《大畜》'利涉大川'，大有发展营商可获利", jiazhai:"《象传》：'天在山中，大畜。'出外谋生成功", shenti:"《说卦》：'艮为止，乾为健。'注意胸腹部", hunlian:"《大畜》九三：'良马逐利艰贞'，可开花结果", xueye:"《大畜》上九：'何天之衢亨'，厚积薄发终有成", shiye:"《彖传》：'大畜，刚健笃实辉光。'积蓄力量蓄势待发", chuxing:"《大畜》'利涉大川'，远行创业皆利", guansi:"大畜宜蓄德，遇讼宜忍让积德", qiuzhi:"《大畜》'利贞'，求职须靠积累的实力说话", touzi:"大畜有积蓄义，投资宜做长期规划" },
+  "颐": { shiyun:"《彖传》：'颐，贞吉。'文王访贤大吉大利", caiyun:"《颐》'自求口实'，谋望求财事遂心", jiazhai:"《象传》：'山下有雷，颐。'注意勿溺爱子女", shenti:"《颐》'观颐自求口实'，注意饮食颐养", hunlian:"《颐》初九：'舍尔灵龟观我朵颐'，诚意才成功", xueye:"《颐》'贞吉观颐'，专心致志学业自有所成", shiye:"《彖传》：'养正则吉。'事业宜自食其力", chuxing:"《颐》'利涉大川'，出行自备充足即可", guansi:"颐养之卦，遇讼宜养精蓄锐不宜急进", qiuzhi:"《颐》'自求口实'，求职靠自身能力", touzi:"颐者养也，投资宜养成长线习惯" },
+  "大过": { shiyun:"《彖传》：'大过，大者过也。'非常时期行非常事", caiyun:"《大过》'栋桡利有攸往'，求名求利不通", jiazhai:"《象传》：'泽灭木，大过。'月令不合难谋", shenti:"《大过》初六：'藉用白茅无咎'，注意隐疾", hunlian:"《大过》九二：'枯杨生稊老夫得其女妻'，难成", xueye:"《大过》上六：'过涉灭顶凶'，打破常规需谨慎", shiye:"《彖传》：'大者过也。'非常时期宜用非常手段", chuxing:"《大过》'栋桡'，出行恐有过载之险", guansi:"大过之讼，事态严重，需非常手段应对", qiuzhi:"大过非常，求职宜突破常规渠道", touzi:"大过风险极大，投资需格外谨慎" },
+  "坎": { shiyun:"《彖传》：'习坎，重险也。'一轮明月照水中", caiyun:"《坎》'维心亨行有尚'，有财防失险中求利", jiazhai:"《象传》：'水洊至，习坎。'不安防盗匪", shenti:"《说卦》：'坎为耳为肾。'注意耳痛肾疾", hunlian:"《坎》六三：'来之坎坎'，考验多不利成婚", xueye:"《坎》'有孚维心亨'，需加倍努力方脱困", shiye:"《彖传》：'习坎，重险。'事业多险，诚信可通", chuxing:"《坎》'行有尚'，出行有险须谨慎", guansi:"坎为陷，讼事缠身难脱。九五'坎不盈祗既平'", qiuzhi:"坎险重重，求职竞争激烈需耐心", touzi:"坎为水，投资如涉深水，风险极高" },
+  "离": { shiyun:"《彖传》：'离，丽也。日月丽乎天。'福禄降人间", caiyun:"《离》'畜牝牛吉'，宜南方求文书之财", jiazhai:"《象传》：'明两作，离。'安稳平善注意防火", shenti:"《说卦》：'离为目为火。'注意目疾心疾", hunlian:"《离》六二：'黄离元吉'，光明之象夏占可成", xueye:"《离》'利贞亨'，文章显达学业光明", shiye:"《彖传》：'重明以丽乎正。'事业光明正大", chuxing:"《离》九三：'日昃之离'，出行宜早不宜晚", guansi:"离为火为明，讼事可真相大白", qiuzhi:"《离》'利贞亨'，求职依正道必得", touzi:"离为文明，投资宜选文化科技产业" },
+  "咸": { shiyun:"《彖传》：'咸，感也。'时运不来莫强求", caiyun:"《咸》九五：'咸其脢无悔'，自有好事在后", jiazhai:"《象传》：'山上有泽，咸。'家宅安宁夫妻和睦", shenti:"《咸》初六：'咸其拇'，注意感应失调", hunlian:"《彖传》：'柔上而刚下，二气感应以相与。'良缘", xueye:"《咸》'亨利贞取女吉'，用心感悟学业可成", shiye:"《彖传》：'天地感而万物化生。'事业需人际感应", chuxing:"《咸》'亨利贞'，出行有良伴同行", guansi:"咸者感也，讼事宜感化对方化解", qiuzhi:"《咸》'取女吉'，求职宜以诚意感人", touzi:"咸卦感应，投资宜凭直觉判断" },
+  "恒": { shiyun:"《彖传》：'恒，久也。'鱼来撞网乐自然", caiyun:"《恒》'亨无咎利贞'，恒心获利", jiazhai:"《象传》：'雷风，恒。'安泰幸福家道长", shenti:"《恒》初六：'浚恒贞凶'，注意慢性病", hunlian:"《恒》六五：'恒其德贞妇人吉'，夫妻之道", xueye:"《恒》'利有攸往'，持之以恒必有成", shiye:"《彖传》：'天地之道恒久而不已。'坚守本业必有成", chuxing:"《恒》九三：'不恒其德或承之羞'，出行宜持之以恒", guansi:"恒卦持久，讼事拖久不利", qiuzhi:"《恒》贞吉，求职需持久耐心", touzi:"恒久之道，投资宜长线持有" },
+  "遁": { shiyun:"《彖传》：'遁亨，遁而亨也。'浓云遮日急流勇退", caiyun:"《遁》'小利贞'，婚姻求财皆不吉", jiazhai:"《象传》：'天下有山，遁。'防口舌宜忍耐", shenti:"《遁》初六：'遁尾厉'，占病不安宜休养", hunlian:"《遁》'小利贞'，不吉宜退避", xueye:"《遁》'遁亨'，暂时退隐充电后再战", shiye:"《彖传》：'遁亨，健而止。'知进退存亡之道", chuxing:"《遁》初六'遁尾厉勿用有攸往'，不利远行", guansi:"遁卦退避，讼事宜退不宜进", qiuzhi:"遁者退也，不宜求职，宜暂避锋芒", touzi:"遁有退意，投资宜及时止盈止损" },
+  "大壮": { shiyun:"《彖传》：'大壮，大者壮也。'时来运转多顺当", caiyun:"《大壮》九二：'贞吉'，买卖求财大亨通", jiazhai:"《象传》：'雷在天上，大壮。'家宅平安事业兴旺", shenti:"《大壮》初九：'壮于趾'，疾病皆除", hunlian:"《大壮》九四：'贞吉悔亡'，婚姻合伙如意", xueye:"《大壮》'利贞'，学业壮大成绩斐然", shiye:"《彖传》：'大者壮也，健而说。'事业如日中天", chuxing:"《大壮》九三'羝羊触藩'，出行防冲突", guansi:"大壮者势强，讼事有力", qiuzhi:"《大壮》'利贞'，求职以实力取胜", touzi:"大壮之势，投资可大举入场" },
+  "晋": { shiyun:"《彖传》：'晋，进也。明出地上。'运气渐好", caiyun:"《晋》'昼日三接'，谋望求财皆如意", jiazhai:"《象传》：'明出地上，晋。'家宅安稳日渐兴盛", shenti:"《晋》初六：'晋如摧如'，疾病可愈", hunlian:"《晋》六二：'晋如愁如贞吉'，婚姻可成", xueye:"《晋》六三：'众允悔亡'，学业晋升步步高升", shiye:"《彖传》：'明出地上，晋。'事业晋升大有可为", chuxing:"《晋》'昼日三接'，出行宜白日", guansi:"晋卦晋升，讼事有望上达", qiuzhi:"晋者进也，求职光明有望", touzi:"晋卦上进，投资趋势看好" },
+  "明夷": { shiyun:"《彖传》：'明入地中，明夷。'时乖运拙艰难之时", caiyun:"《明夷》'利艰贞'，价格低宜守不宜攻", jiazhai:"《象传》：'明入地中，明夷。'家运衰微多劳苦", shenti:"《明夷》六二：'夷于左股'，注意腹部血液循环", hunlian:"《明夷》初九：'君子于行三日不食'，不成功", xueye:"《明夷》'利艰贞'，学业受挫暂退修德", shiye:"《彖传》：'内文明而外柔顺。'黑暗期宜隐忍", chuxing:"《明夷》初九'君子于行三日不食'，出行困顿", guansi:"明夷晦暗，讼事难明宜忍", qiuzhi:"明夷受伤，不利求职宜暂退", touzi:"明夷晦暗，投资不宜进场" },
+  "家人": { shiyun:"《彖传》：'家人，女正位乎内。'各安其位", caiyun:"《家人》六四：'富家大吉'，谋望求财不遂心", jiazhai:"《象传》：'风自火出，家人。'家庭和睦为贵", shenti:"《家人》九三：'家人嗃嗃'，疾病未愈注意调养", hunlian:"《家人》'利女贞'，婚姻可成需经营", xueye:"《家人》初九：'闲有家悔亡'，家庭支持学业进步", shiye:"《彖传》：'正家而天下定。'事业以齐家为本", chuxing:"《家人》'有孚威如'，出行宜偕家人", guansi:"家人主亲，讼事宜请家人调解", qiuzhi:"《家人》'富家大吉'，宜在本地求职", touzi:"家人卦主内，投资宜选熟悉的领域" },
+  "睽": { shiyun:"《彖传》：'睽，火动而上泽动而下。'过河无桥遇薄冰", caiyun:"《睽》'小事吉'，小心谨慎可获利", jiazhai:"《象传》：'上火下泽，睽。'家和万事兴", shenti:"《说卦》：'离为目，兑为口。'薄冰甚险小心行事", hunlian:"《睽》上九：'匪寇婚媾往遇雨则吉'，性情不合", xueye:"《睽》初九：'丧马勿逐自复'，求同存异可学", shiye:"《彖传》：'睽，乖也。'事业分歧需求同存异", chuxing:"《睽》九二'遇主于巷'，出行有巧遇", guansi:"睽者乖离，讼事双方分歧大", qiuzhi:"《睽》'见恶人无咎'，求职遇刁难亦无害", touzi:"睽者异也，投资宜差异化策略" },
+  "蹇": { shiyun:"《彖传》：'蹇，难也，险在前也。'事不遂心且耐烦", caiyun:"《蹇》'利西南'，求财费力不宜远行", jiazhai:"《象传》：'山上有水，蹇。'行人未至投向无门", shenti:"《蹇》初六：'往蹇来誉'，疾病拖沓耐心治疗", hunlian:"《蹇》六二：'王臣蹇蹇匪躬之故'，好事难成", xueye:"《蹇》九五：'大蹇朋来'，学业困难反求诸己", shiye:"《彖传》：'蹇，难也，险在前。'事业艰难宜知难而退", chuxing:"《蹇》'利西南不利东北'，出行绕道避险", guansi:"蹇者难也，讼事艰难曲折", qiuzhi:"《蹇》'利见大人'，求职求助尊长", touzi:"蹇难之时，投资宜暂停观望" },
+  "解": { shiyun:"《彖传》：'解，险以动。'五关脱难困难将解", caiyun:"《解》九二：'田获三狐得黄矢'，雨后见月", jiazhai:"《象传》：'雷雨作，解。'先劳苦后幸福", shenti:"《解》'无所往其来复吉'，疾病不用愁", hunlian:"《解》六三：'负且乘致寇至'，解除误会则成", xueye:"《解》'利西南'，困难已解学业通达", shiye:"《彖传》：'险以动，动而免乎险。'困难解除事业新启", chuxing:"《解》'利西南'，出行困难渐解", guansi:"解者散也，讼事可化解", qiuzhi:"《解》初六'无咎'，求职解困", touzi:"解卦释放，投资困境将解" },
+  "损": { shiyun:"《彖传》：'损，损下益上。'比作推车受折磨", caiyun:"《损》初九：'已事遄往无咎'，先损后挽回", jiazhai:"《象传》：'山下有泽，损。'先劳苦后幸福", shenti:"《说卦》：'兑为口，艮为止。'注意贫血消化", hunlian:"《损》九二：'利贞征凶'，先苦后甜付出有报", xueye:"《损》六三：'三人行则损一人'，坚持有收获", shiye:"《彖传》：'损下益上，其道上行。'暂时损失必有益", chuxing:"《损》初九'酌损之'，出行宜减少行李", guansi:"损卦减损，讼事必有损失", qiuzhi:"《损》'弗损益之'，求职可降低要求", touzi:"损者减也，投资有损宜止损" },
+  "益": { shiyun:"《彖传》：'益，损上益下。'多年枯木又开花", caiyun:"《益》'利有攸往'，交易有成", jiazhai:"《象传》：'风雷，益。'枯木开花主人兴隆", shenti:"《益》九五：'有孚惠心勿问元吉'，疾病口舌安宁", hunlian:"《益》'利涉大川'，婚姻求财大吉庆", xueye:"《益》初九：'利用为大作元吉'，学业增益进步", shiye:"《彖传》：'益动而巽，日进无疆。'事业增益发展", chuxing:"《益》'利涉大川'，出行大吉", guansi:"益卦增益，讼事可获赔偿", qiuzhi:"《益》'利用为大作'，求职可担大任", touzi:"益者增也，投资获利可期" },
+  "夬": { shiyun:"《彖传》：'夬，决也，刚决柔也。'游蜂脱网决断时", caiyun:"《夬》九五：'苋陆夬夬中行'，求财到手", jiazhai:"《象传》：'泽上于天，夬。'富贵荣华胜前", shenti:"《夬》九三：'壮于頄有凶'，疾病除根", hunlian:"《夬》'不利即戎'，不吉当断则断", xueye:"《夬》'利有攸往'，果断抉择确定方向", shiye:"《彖传》：'夬，决也。'关键时刻要果断决策", chuxing:"《夬》'扬于王庭'，出行宜走光明大道", guansi:"夬卦决断，讼事宜速决", qiuzhi:"《夬》初九'壮于前趾'，求职果断出击", touzi:"夬者决也，投资宜果断入市" },
+  "姤": { shiyun:"《彖传》：'姤，遇也，柔遇刚也。'他乡遇友须防小人", caiyun:"《姤》初六：'系于金柅贞吉'，有阻碍不能得", jiazhai:"《象传》：'天下有风，姤。'不幸的开始", shenti:"《姤》九二：'包有鱼无咎'，注意性病结核", hunlian:"《姤》'女壮勿用取女'，意外相遇需谨慎", xueye:"《姤》九五：'含章有陨自天'，遇良师则进步", shiye:"《彖传》：'天地相遇，品物咸章。'邂逅机缘可合作", chuxing:"《姤》'系于金柅'，出行恐遇意外阻隔", guansi:"姤卦有遇，讼事突发难防", qiuzhi:"《姤》九五'含章有陨自天'，求职有意外机会", touzi:"姤者遇也，投资偶遇良机" },
+  "萃": { shiyun:"《彖传》：'萃，聚也。顺以说。'鲤鱼化龙喜气来", caiyun:"《萃》初六：'有孚不终乃乱乃萃'，求财到手", jiazhai:"《象传》：'泽上于地，萃。'祸门闭福门开", shenti:"《萃》九五：'萃有位无咎'，口舌疾病永无灾", hunlian:"《萃》六二：'引吉无咎'，良缘可成", xueye:"《萃》'利见大人'，聚集英才学业进步", shiye:"《彖传》：'聚以正也。'事业宜聚集人才共事", chuxing:"《萃》'王假有庙'，出行宜会亲友", guansi:"萃卦聚集，讼事可聚证据", qiuzhi:"《萃》'用大牲吉'，求职宜大张旗鼓", touzi:"萃者聚也，投资宜聚财" },
+  "升": { shiyun:"《彖传》：'升，柔以时升。'指日高升气象新", caiyun:"《升》初六：'允升大吉'，求财到手如意", jiazhai:"《象传》：'地中生木，升。'家宅安宁逐渐发展", shenti:"《升》九二：'孚乃利用禴'，疾病口舌皆除根", hunlian:"《升》六四：'王用亨于岐山吉'，吉祥良缘", xueye:"《升》六五：'贞吉升阶'，学业步步高升", shiye:"《彖传》：'积小以高大。'事业步步高升", chuxing:"《升》'南征吉'，出行向南吉", guansi:"升卦上升，讼事可上诉", qiuzhi:"《升》'用见大人'，求职可拜见高层", touzi:"升者进也，投资看涨" },
+  "困": { shiyun:"《彖传》：'困，刚揜也。'时运不来小人欺", caiyun:"《困》九二：'困于酒食'，无利有损宜守", jiazhai:"《象传》：'泽无水，困。'不安防口舌", shenti:"《说卦》：'兑为口，坎为耳。'注意咽喉气喘", hunlian:"《困》六三：'困于石据于蒺藜'，困顿不成", xueye:"《困》九五：'困于赤绂乃徐有说'，守正出", shiye:"《彖传》：'困，穷而通。'事业困顿守正不移", chuxing:"《困》初六'臀困于株木'，出行困足", guansi:"困卦困境，讼事缠身难脱", qiuzhi:"《困》'有言不信'，求职言语难信", touzi:"困者穷也，投资被套" },
+  "井": { shiyun:"《彖传》：'井，改邑不改井。'枯井一朝涌泉新", caiyun:"《井》'无丧无得'，时来运转稳定获利", jiazhai:"《象传》：'木上有水，井。'平和安静家稳定", shenti:"《说卦》：'坎为水，巽为风。'注意泌尿下半身", hunlian:"《井》六四：'井甃无咎'，诚恳耐心可成", xueye:"《井》九三：'井渫不食为我心恻'，学问源源不断", shiye:"《彖传》：'井养而不穷。'事业稳定恒久", chuxing:"《井》'改邑不改井'，出行固定目的地", guansi:"井卦稳定，讼事维持原判", qiuzhi:"《井》'井冽寒泉食'，求职稳定岗位", touzi:"井者静也，投资宜选稳定收益" },
+  "革": { shiyun:"《彖传》：'革，水火相息。'幸得天恩降雨来", caiyun:"《革》'巳日乃孚'，改变方针即可获利", jiazhai:"《象传》：'泽中有火，革。'果断兴革", shenti:"《说卦》：'离为火，兑为口。'注意心脏眼睛", hunlian:"《革》上六：'君子豹变'，宜另找对象", xueye:"《革》九五：'大人虎变'，改革创新学业突破", shiye:"《彖传》：'革而当，其悔乃亡。'改革是事业转机", chuxing:"《革》'巳日乃孚'，出行更改行程", guansi:"革者变也，讼事改判", qiuzhi:"《革》九三'革言三就'，求职需多次尝试", touzi:"变革之象，投资格局变化" },
+  "鼎": { shiyun:"《彖传》：'鼎，象也。以木巽火。'若占此卦喜自然", caiyun:"《鼎》'元吉亨'，求名求利两周全", jiazhai:"《象传》：'木上有火，鼎。'生意兴隆乐自然", shenti:"《鼎》九四：'鼎折足覆公餗'，疾病痊愈", hunlian:"《鼎》初六：'鼎颠趾利出否'，婚姻合伙如意", xueye:"《鼎》'元吉亨'，学业鼎盛革故鼎新", shiye:"《彖传》：'圣人亨以享上帝。'事业鼎盛兴旺", chuxing:"《鼎》九二'鼎有实我仇有疾'，出行有备无患", guansi:"鼎卦铸新，讼事重审可翻案", qiuzhi:"《鼎》上九'鼎玉铉大吉'，求职位极人臣", touzi:"鼎者立也，投资宜建立新仓位" },
+  "震": { shiyun:"《彖传》：'震，亨。震来虩虩。'时来运转响一声", caiyun:"《震》六二：'震来厉亿丧贝'，谋事求财不费力", jiazhai:"《象传》：'洊雷，震。'宅中虚惊春冬吉", shenti:"《说卦》：'震为足为雷。'注意足疾肝经", hunlian:"《震》'笑言哑哑'，有声名之家可成", xueye:"《震》初九：'震来虩虩后笑言哑哑吉'，惊人之喜", shiye:"《彖传》：'恐惧修省。'事业变动中求进", chuxing:"《震》'震惊百里'，出行防意外变动", guansi:"震卦雷动，讼事突发惊变", qiuzhi:"《震》六五'亿无丧有事'，求职一波三折", touzi:"震者动也，投资市场剧烈波动" },
+  "艮": { shiyun:"《彖传》：'艮，止也。时止则止。'财帛到手难", caiyun:"《艮》'艮其背不获其身'，求财到手难", jiazhai:"《象传》：'兼山，艮。'安稳有阻家人不睦", shenti:"《说卦》：'艮为手为止。'注意手指胃脾", hunlian:"《艮》六二：'艮其腓不拯其随'，阻隔难成", xueye:"《艮》'行其庭不见其人'，停滞需知止有定", shiye:"《彖传》：'时止则止，时行则行。'宜停则停", chuxing:"《艮》'艮其背'，出行止步不前", guansi:"艮者止也，讼事宜停", qiuzhi:"《艮》初六'艮其趾无咎'，求职暂停", touzi:"艮止之象，投资宜暂停观望" },
+  "渐": { shiyun:"《彖传》：'渐，之进也。'凤凰落在西岐山", caiyun:"《渐》六二：'鸿渐于磐饮食衎衎'，求财必准", jiazhai:"《象传》：'山上有木，渐。'诸事平稳渐入佳境", shenti:"《渐》初六：'鸿渐于干小子厉'，疾病逐渐康复", hunlian:"《渐》'女归吉'，渐进发展可成", xueye:"《渐》上九：'鸿渐于陆其羽可用为仪'，渐进有成", shiye:"《彖传》：'进得位，往有功也。'事业循序渐进而成", chuxing:"《渐》'鸿渐于磐'，出行渐进有序", guansi:"渐卦缓进，讼事从长计议", qiuzhi:"《渐》'女归吉'，求职从基层做起", touzi:"渐者进也，投资逐步建仓" },
+  "归妹": { shiyun:"《彖传》：'归妹，天地之大义。'树上求之不顺情", caiyun:"《归妹》'征凶无攸利'，劳而无功事不成", jiazhai:"《象传》：'泽上有雷，归妹。'做事颠倒月令不好", shenti:"《归妹》初九：'归妹以娣跛能履'，疾病不愈", hunlian:"《归妹》'征凶无攸利'，婚姻不顺需谨慎", xueye:"《归妹》九四：'归妹愆期迟归有时'，急于求成不利", shiye:"《彖传》：'柔乘刚也。'事业不宜强求", chuxing:"《归妹》初九'跛能履征吉'，出行尚可", guansi:"归妹之讼，婚姻纠纷难解", qiuzhi:"《归妹》'愆期迟归有时'，求职延期", touzi:"归妹者嫁也，投资如嫁女不可轻率" },
+  "丰": { shiyun:"《彖传》：'丰，大也。明以动。'一朝磨明似月圆", caiyun:"《丰》'亨王假之'，交易有利丰盛可期", jiazhai:"《象传》：'雷电皆至，丰。'丰盛富裕家运昌隆", shenti:"《丰》上六：'丰其屋蔀其家'，盛极防衰", hunlian:"《丰》初九：'遇其配主虽旬无咎'，可得佳偶", xueye:"《丰》六五：'来章有庆誉吉'，学业丰硕成果", shiye:"《彖传》：'明以动，故丰。'事业丰盛大有可为", chuxing:"《丰》六二'日中见斗'，出行宜日中午时", guansi:"丰卦盛极，讼事可胜防过", qiuzhi:"《丰》'勿忧宜日中'，求职正值鼎盛期", touzi:"丰者大也，投资收获丰盛" },
+  "旅": { shiyun:"《彖传》：'旅，小亨。柔得中乎外。'小人使计用火烧", caiyun:"《旅》六二：'旅即次怀其资'，求财费力不宜远行", jiazhai:"《象传》：'山上有火，旅。'不宜居无定所", shenti:"《旅》九三：'旅焚其次丧其童仆'，旅途劳顿", hunlian:"《旅》上九：'鸟焚其巢旅人先笑后号咷'，漂泊不定", xueye:"《旅》'旅贞吉'，求学在外宜谦逊守中", shiye:"《彖传》：'旅，小亨。'事业宜稳不宜躁", chuxing:"《旅》'旅贞吉'，出行谨慎则平安", guansi:"旅卦寄居，讼事外地处理不利", qiuzhi:"《旅》'旅即次'，求职异地可成", touzi:"旅者寄也，投资宜短期" },
+  "巽": { shiyun:"《彖传》：'巽，顺从。重巽以申命。'泛舟得水离沙滩", caiyun:"《巽》'利有攸往'，求财得利有利三倍", jiazhai:"《象传》：'随风，巽。'安稳利市家宅平安", shenti:"《说卦》：'巽为股为风。'注意股肱风疾肠疾", hunlian:"《巽》初六：'进退利武人之贞'，宜长女之婚", xueye:"《巽》九五：'贞吉悔亡无不利'，学业渐进", shiye:"《彖传》：'随风，巽。'事业宜顺势而行", chuxing:"《巽》'利有攸往'，出行顺利", guansi:"巽者顺也，讼事宜顺服", qiuzhi:"《巽》'利见大人'，求职宜谦卑", touzi:"巽风无孔不入，投资宜分散" },
+  "兑": { shiyun:"《彖传》：'兑，说也。'觉着做事不费力", caiyun:"《兑》初九：'和兑吉'，求财到手和气生财", jiazhai:"《象传》：'丽泽，兑。'不安防口舌", shenti:"《说卦》：'兑为口舌。'疾病痊愈注意喉舌", hunlian:"《兑》'亨利贞'，不成秋占可成", xueye:"《兑》'朋友讲习'，喜悦学习事半功倍", shiye:"《彖传》：'说以先民，民忘其劳。'愉悦中事业可成", chuxing:"《兑》九四'商兑未宁'，出行商议不定", guansi:"兑为说，讼事可辩", qiuzhi:"《兑》'和兑吉'，求职以和气致祥", touzi:"兑者悦也，投资快乐" },
+  "涣": { shiyun:"《彖传》：'涣，涣散也。风行水上。'风波不定宜静", caiyun:"《涣》'利涉大川'，财物易散须谨慎", jiazhai:"《象传》：'风行水上，涣。'家人离散多沟通", shenti:"《说卦》：'坎为水，巽为风。'注意风湿感冒", hunlian:"《涣》九二：'涣奔其机悔亡'，若即若离需诚意", xueye:"《涣》九五：'涣汗其大号'，心思涣散需定心", shiye:"《彖传》：'涣，离散也。'事业宜聚拢人心", chuxing:"《涣》'利涉大川'，出行可渡难关", guansi:"涣者散也，讼事可化解消散", qiuzhi:"《涣》初六'用拯马壮吉'，求职需外力拯救", touzi:"涣散之时，投资宜撤出观望" },
+  "节": { shiyun:"《彖传》：'节，亨。刚柔分而刚得中。'时来运转喜气生", caiyun:"《节》初九：'不出户庭无咎'，买卖等待为妙", jiazhai:"《象传》：'泽上有水，节。'规矩之平安幸福", shenti:"《节》九二：'不出门庭凶'，注意神经消化病", hunlian:"《节》九五：'甘节吉往有尚'，耐心即可成功", xueye:"《节》'苦节不可贞'，学习需有节制适度", shiye:"《彖传》：'天地节而四时成。'事业宜有节制规划", chuxing:"《节》初九'不出户庭无咎'，宜暂缓出行", guansi:"节卦节制，讼事需有度", qiuzhi:"《节》'安节亨'，求职安分守己", touzi:"节者制也，投资有预算有节制" },
+  "中孚": { shiyun:"《彖传》：'中孚，柔在内而刚得中。'如同太公做买卖", caiyun:"《中孚》'豚鱼吉'，占利不全诚信可补", jiazhai:"《象传》：'泽上有风，中孚。'和好平安以诚相待", shenti:"《中孚》初九：'虞吉有它不燕'，心诚则灵", hunlian:"《中孚》九五：'有孚挛如无咎'，以诚达成目的", xueye:"《中孚》九二：'鸣鹤在阴其子和之'，诚信求学有所成", shiye:"《彖传》：'信及豚鱼。'事业以诚信为本", chuxing:"《中孚》'利涉大川'，出行诚信待人", guansi:"中孚诚信，讼事以诚相待可解", qiuzhi:"《中孚》'我有好爵吾与尔靡之'，求职互利共赢", touzi:"中孚者信也，投资重信用" },
+  "小过": { shiyun:"《彖传》：'小过，小者过而亨。'心内惶恐眼里跳", caiyun:"《小过》六五：'密云不雨自我西郊'，小有成果", jiazhai:"《象传》：'山上有雷，小过。'目下不吉交节自强", shenti:"《小过》初六：'飞鸟以凶'，注意调养防小病", hunlian:"《小过》九四：'弗过遇之往厉必戒'，交易宜趁早", xueye:"《小过》'可小事不可大事'，小有过失宜柔", shiye:"《彖传》：'小过，亨。'事业有小过可改", chuxing:"《小过》'不宜上宜下'，出行宜低调", guansi:"小过之讼，小有麻烦", qiuzhi:"《小过》'可小事不可大事'，求职宜从小做起", touzi:"小过微调，投资宜小幅调整" },
+  "既济": { shiyun:"《彖传》：'既济，亨小。利贞。'金榜之上题姓名", caiyun:"《既济》九五：'东邻杀牛不如西邻之禴祭'，顺利获利", jiazhai:"《象传》：'水在火上，既济。'吉庆家道中兴", shenti:"《既济》九五'实受其福'，疾病可愈守成", hunlian:"《既济》初九：'曳其轮濡其尾无咎'，初吉终乱谨慎", xueye:"《既济》'初吉终乱'，学业成功需继续努力", shiye:"《彖传》：'既济，亨小。'事业成功宜守成", chuxing:"《既济》初九'曳其轮濡其尾'，出行防微杜渐", guansi:"既济已成，讼事可结案", qiuzhi:"《既济》六二'妇丧其茀勿逐七日得'，求职终得", touzi:"既济已成，投资已达目标宜收" },
+  "未济": { shiyun:"《彖传》：'未济，亨。柔得中也。'事未完成再接再厉", caiyun:"《未济》'濡其尾无攸利'，婚姻财帛莫强求", jiazhai:"《象传》：'火在水上，未济。'目下忍耐过月无妨", shenti:"《未济》初六：'濡其尾吝'，有病需耐心调养", hunlian:"《未济》九四：'震用伐鬼方三年有赏'，缘分未到", xueye:"《未济》'小狐汔济濡其尾'，尚未成功仍需努力", shiye:"《彖传》：'未济，亨。'事业未竟需再接再厉", chuxing:"《未济》'濡其尾'，出行不顺须谨慎", guansi:"未济之讼，悬而未决", qiuzhi:"《未济》九二'曳其轮贞吉'，求职稳步推进", touzi:"未济未成，投资局面未明" }
+};
+
+// ==========================================================
+// 2b. 白话解读、典故案例、防灾避祸增强内容
+// ==========================================================
+const HEXAGRAM_DETAILS = {
+  "乾": {
+    baihua: [
+      "乾卦是《易经》的第一卦，六个爻全都是阳爻（——），代表天、刚健、创造力和自强不息的精神。就像太阳每天升起，从不间断，乾卦告诉我们：真正的君子应该效法天道，不断地自我提升、永不停歇。",
+      "卦辞「元亨利贞」是乾卦的核心。元是开始、亨是通达、利是和谐、贞是正固。简单说就是：只要走在正道上，开始会顺利，发展会通达，结果会圆满。但要注意，这四个字的前提是「贞」——必须坚守正道。",
+      "乾卦六爻从「潜龙勿用」到「亢龙有悔」，讲的是一个人从潜伏、崭露头角、勤奋工作、审时度势、达到巅峰到盛极而衰的完整过程。孔子在《文言传》中解释说，这不仅是做事的六个阶段，更是君子一生修德的六个境界。"
+    ],
+    stories: [
+      {
+        title: "舜耕历山——潜龙勿用的典范",
+        text: "舜年轻时在历山耕种，虽然才德出众，但并不急于显露。他孝顺父母、友爱兄弟，即使被父亲和弟弟百般迫害，仍然以德报怨。尧帝听闻舜的贤德，将两个女儿嫁给他，最终禅让天下。舜的故事完美诠释了「潜龙勿用」——真正有能力的人，懂得在时机未到时默默积累。",
+        source: "《史记·五帝本纪》"
+      },
+      {
+        title: "诸葛亮隐居南阳——等待「见龙在田」的时机",
+        text: "诸葛亮早年隐居南阳，自比管仲、乐毅，看似无所作为，实则博览群书、观察天下大势。刘备三顾茅庐时，诸葛亮提出《隆中对》，分析天下三分之势，正是「见龙在田，利见大人」——才德初显，遇到赏识之人便能施展抱负。",
+        source: "《三国志·蜀书·诸葛亮传》"
+      }
+    ],
+    disaster: "乾卦虽然大吉，但最危险的在于上九「亢龙有悔」——事物发展到了极致就会走向反面。当你处于人生巅峰时，最容易犯的错误就是骄傲自满、刚愎自用。历史上商纣王「智足以拒谏，言足以饰非」，最终亡国，正是亢龙有悔的典型。",
+    avoidance: "保持「群龙无首」的谦逊心态——即使处于领导地位，也不要事事争先、锋芒毕露。乾卦用九说「见群龙无首，吉」，意思是刚健而不逞强，有才能而不自傲。日常中可以：①功成身退，不居功自傲；②广泛听取不同意见；③给自己留出反省和调整的空间。"
+  },
+  "坤": {
+    baihua: [
+      "坤卦与乾卦相对，六个爻全都是阴爻（- -），代表地、柔顺、承载和包容的品德。就像大地默默承载万物，从不抱怨，坤卦告诉我们：真正的修养体现在厚德载物——以宽厚的胸怀包容一切。",
+      "卦辞说「坤，元亨，利牝马之贞」。牝马是母马，温顺而坚韧。坤卦不是教你软弱，而是教你像大地一样：平时柔顺温和，但一旦有原则问题，就像母马护驹一样坚定。古人说「坤厚载物，德合无疆」，意思是大地深厚、承载万物，品德广大无边。",
+      "坤卦的六爻展现了从「履霜」到「龙战」的过程。初六「履霜坚冰至」提醒我们：坏事往往从小处开始的，见到秋霜就要想到寒冬将至；六二「直方大」则说：做人正直、方正、宽大，不刻意学习也能做好。孔子在《文言》中说「坤至柔而动也刚」——最柔顺的往往也最刚强。"
+    ],
+    stories: [
+      {
+        title: "周公辅成王——厚德载物的典范",
+        text: "周武王去世后，成王年幼，周公摄政。他虽大权在握，却「负扆南面」代行天子之职，兢兢业业。管叔、蔡叔散布谣言说周公要篡位，周公毫不动摇，东征平定三监之乱。成王长大后，周公毫不犹豫地还政于王，自己退回臣位。这正是「含章可贞」「黄裳元吉」——内心有才华，外表谦虚，功成身退。",
+        source: "《史记·鲁周公世家》"
+      },
+      {
+        title: "晋文公退避三舍——柔能克刚",
+        text: "晋文公重耳流亡十九年，历经磨难。回国后与楚国交战，他兑现当年承诺「退避三舍」——主动后退九十里。看似示弱，实则以退为进，最终在城濮一战大败楚军，成为春秋霸主。这正是坤卦以柔克刚、先屈后伸的智慧。",
+        source: "《左传·僖公二十八年》"
+      }
+    ],
+    disaster: "坤卦最忌上六「龙战于野，其血玄黄」——阴柔过度会与阳刚发生剧烈冲突。干宝注此爻直接联系武王伐纣的牧野之战，说明臣下与君主对抗的惨烈后果。当你一味忍让到极点，反而会爆发不可收拾的冲突。",
+    avoidance: "① 保持「直方大」的品格：正直而不刻薄，方正而不固执，宽大而不放纵。② 学会「括囊」——管住自己的嘴，不该说的不说。③ 发现小事苗头就要及时处理，像初六「履霜」一样，见微知著，防患于未然。"
+  },
+  "屯": {
+    baihua: [
+      "屯卦是乾卦、坤卦之后的第三卦，上卦为坎（水），下卦为震（雷），代表「万事开头难」。屯的意思是「盈塞」——就像种子在地下刚刚萌芽，虽然充满生命力，但上面压着厚厚的土，要拼命往上顶才能破土而出。",
+      "卦辞说「屯，元亨利贞，勿用有攸往，利建侯」。意思是：虽然有远大前程，但目前不宜轻举妄动。最好的策略是「建侯」——先安定好现有的基础，像建立诸侯国一样打好根基。《彖传》说「刚柔始交而难生」，就是说万事开头总是最难的。",
+      "初九「磐桓」像一块大石头压在植物上，但这正是成长的必经之路。六二「屯如邅如，乘马班如」描绘了一个人骑马在原地打转转，进退两难——创业初期，这种感觉再正常不过了。坚持下去，终会云开日出。"
+    ],
+    stories: [
+      {
+        title: "季布逃难——屯卦的艰难求生",
+        text: "项羽麾下大将季布，在刘邦得天下后被悬赏追捕。他四处逃亡，像屯卦描述的那样「屯如邅如」。但因为他为人重信义，大家都帮他，最终不仅被赦免，还做了汉朝的大官。这正是屯卦「利建侯」——艰难中建立信誉，终有回报。",
+        source: "《史记·季布栾布列传》"
+      }
+    ],
+    disaster: "屯卦最怕急躁冒进。卦辞明确说「勿用有攸往」——不要急于行动。如果你在事情开头的困难期硬闯，往往会碰得头破血流。创业初期最忌讳盲目扩张、贪大求快。",
+    avoidance: "① 创业初期稳扎稳打，先做好一个点再扩展。② 遇到挫折时不要气馁，这是成长的必经阶段。③「利建侯」——建立好基础团队和核心业务，不要急于追求规模和速度。④ 保持耐心，就像种子破土，需要时间和持续的努力。"
+  },
+  "蒙": {
+    baihua: [
+      "蒙卦上艮（山）下坎（水），代表「山下出泉」——泉水在山下刚刚涌出，虽然清澈但方向未定，需要引导。蒙就是蒙昧、幼稚的意思，就像孩子刚上学什么都不懂，需要老师教导。",
+      "卦辞说「匪我求童蒙，童蒙求我」——不是老师去找学生，而是学生来求老师。这和孔子「不愤不启，不悱不发」是一个道理：只有当你真正渴望学习时，教育才会有效。初筮告，再三渎，渎则不告——问你一次我告诉你，反复问同一个问题就是在亵渎，我就不说了。",
+      "蒙卦强调教育的双向性。九二「包蒙吉」——要包容学生的幼稚和错误；上九「击蒙」——但也需要适当的约束和管教。这就像教孩子，既要有耐心包容，又要有原则纪律。"
+    ],
+    stories: [
+      {
+        title: "周成王启蒙与周公的教导",
+        text: "周成王年幼即位，周公担心他荒废学业，亲自写了《尚书·无逸》来教导他。周公以商朝贤君和昏君的对比，告诉成王：君子不应贪图安逸，要先了解农耕的辛苦，才能知道百姓的艰难。成王后来成为一代贤君，正是「童蒙求我」——好学的君主遇到好老师。",
+        source: "《尚书·无逸》"
+      },
+      {
+        title: "吕蒙读书——「士别三日当刮目相看」",
+        text: "三国时期，吕蒙最初是一介武夫，不爱读书。孙权劝他：「你现在掌管大事，不能不学习。」吕蒙推脱军务繁忙。孙权说：「你比我还忙吗？我经常读书，觉得大有帮助。」吕蒙从此发奋读书，后来鲁肃再见他时惊叹：「学识英博，非复吴下阿蒙！」这正是蒙卦「童蒙求我」——主动学习才能脱胎换骨。",
+        source: "《资治通鉴·汉纪》"
+      }
+    ],
+    disaster: "蒙卦最危险的是六三「勿用取女，见金夫不有躬」——被眼前利益迷惑，失去自我。比如学习上走捷径、投机取巧，或者被虚假的「速成班」欺骗。上九「击蒙」也警示：过于严厉或错误的教育方式会造成伤害。",
+    avoidance: "① 保持谦逊好学的态度，主动求教于人。② 学习要专一，不要三心二意。③ 教育要有耐心，包容学生的错误。④ 遇到不懂的事情「再三渎」——反复问同样的问题而不去思考，是在浪费时间和机会。"
+  },
+  "需": {
+    baihua: [
+      "需卦上坎（水）下乾（天），代表「云上于天」——天空中聚满了云，但还没下雨。需就是等待的意思。古人说「云上于天，需。君子以饮食宴乐」——天气不好不能出门，那就安心在家吃饭、享受生活，耐心等待雨过天晴。",
+      "卦辞说「需，有孚，光亨，贞吉，利涉大川」——等待的时候要有诚信和耐心，最终会光明亨通。就像农民种田，播下种子后不能每天都扒开土看长了没有，而是按时浇水施肥，等待自然生长。",
+      "六爻展示了等待的不同阶段：初九「需于郊」在郊外等，距离危险远；九三「需于泥」已经陷在泥里了，危险逼近；九五「需于酒食」——在宴饮中从容等待，这才是最理想的等待状态。"
+    ],
+    stories: [
+      {
+        title: "姜太公钓鱼——等待最适合的时机",
+        text: "姜太公（姜子牙）八十岁才遇到周文王。此前他曾在商朝做官，见纣王无道便辞官隐居。他在渭水边钓鱼，用的却是直钩（「愿者上钩」），其实是在等待真正赏识他的人。文王打猎时遇到他，一谈之下大为折服，说：「我的太公（祖父）曾预言会有圣人来到周地，您就是这个人！」于是拜太公为师。这正是需卦的最高境界——不是消极等待，而是在等待中充分准备。",
+        source: "《史记·齐太公世家》"
+      }
+    ],
+    disaster: "需卦最大危险是急躁——九三「需于泥，致寇至」说明强行前进反而会招来灾祸。就像在泥沼中挣扎会越陷越深，不如先停下来想清楚再走。",
+    avoidance: "① 学会「饮食宴乐」——在等待中保持好心态，该吃吃该喝喝。②「有孚」——等待时保持诚信，不投机取巧。③ 分清是「需于郊」还是「需于泥」，处在不同阶段有不同的应对策略。④ 等待不是什么都不做，而是用心准备，等待机会的到来。"
+  },
+  "讼": {
+    baihua: [
+      "讼卦上乾（天）下坎（水），代表「天与水违行」——天向上、水向下，方向相反，必然产生矛盾和争讼。讼就是打官司、争辩是非的意思。",
+      "卦辞说「讼，有孚窒惕，中吉，终凶」——即便是诚实的人，遇到争讼也会感到窒息和恐惧。争讼即使中途占理，最终结果往往都不好。孔子在《象传》中说「君子以作事谋始」——聪明的人在做事开始就考虑清楚，避免日后纠纷。",
+      "九四「不克讼，复即命渝安贞吉」——争讼不赢就回头，改变态度，安守正道，这才是吉利的。这告诉我们：争强好胜往往得不偿失，退一步海阔天空。"
+    ],
+    stories: [
+      {
+        title: "汉高祖斩丁公——背主求荣者终遭戮",
+        text: "丁公是项羽的部将，曾在彭城之战中围困刘邦。但他放了刘邦一马。项羽灭亡后，丁公去投靠刘邦，以为有恩于刘。刘邦却说：「丁公为项王臣不忠，使项王失天下。」于是杀丁公以警示天下：做臣子的不要学丁公不忠。这正是讼卦「终凶」——靠不正当手段的人，即使一时得意，最终也不会有好结果。",
+        source: "《史记·季布栾布列传》"
+      }
+    ],
+    disaster: "卦辞明确指出「终凶」——争讼最终没有好结果。即使你有理，诉讼也会耗费大量时间、金钱和精力，结下仇怨。九五虽「讼元吉」（打官司大吉），但那是极少数特殊情况。",
+    avoidance: "① 做事之前先想清楚，立好规矩，避免后期纠纷（作事谋始）。② 遇到矛盾先调解，不要急着打官司。③ 如果输了就认输（「不克讼，复即命」），及时止损。④ 最重要的一点：与人为善，减少争执的根源。"
+  },
+  "师": {
+    baihua: [
+      "师卦上坤（地）下坎（水），代表「地中有水」——水在地下积蓄，等待时机涌出。师在古代指军队，也有「师出有名」的意思。这个卦讲的是如何带领团队、管理组织。",
+      "卦辞说「师，贞，丈人吉，无咎」——带兵打仗要正义（贞），由德高望重的人（丈人）领导才能成功。对应到现代管理：领导者要有德行，团队要有正当目标。",
+      "初六「师出以律，否藏凶」——军队出发要有纪律，否则就凶险。六五「长子帅师」——让正直有德的人领导，而不是让小人掌权。这都是用兵和管理的基本法则。"
+    ],
+    stories: [
+      {
+        title: "周亚夫治军——师出以律的典范",
+        text: "汉文帝时期，周亚夫驻军细柳营。文帝前去慰劳军队，到了细柳营，竟被拦住不让进。使者通报后，周亚夫才下令开门，还告诫军营中不能驱马奔驰。文帝感慨说：「这才是真正的将军！像霸上、棘门的军队，简直像儿戏一样。」后来周亚夫果然平定七国之乱，成为一代名将。这正是师卦初六「师出以律」——纪律严明的军队才能打胜仗。",
+        source: "《史记·绛侯周勃世家》"
+      }
+    ],
+    disaster: "师卦主要危险在六三「师或舆尸凶」——领导人无能或不团结，会导致全军覆没（用战车载满尸体）。另一个危险是「小人勿用」——让小人掌权，即使打了胜仗也会带来后患。",
+    avoidance: "① 领导团队要有明确的目标和纪律。② 选择靠谱的合作伙伴（「丈人吉」）。③ 不要让品行不端的人担任关键职位。④ 即使赢了也不要让好战分子掌权，避免后患。"
+  },
+  "比": {
+    baihua: [
+      "比卦上坎（水）下坤（地），代表「地上有水」——水在大地上流淌，滋养万物。比就是亲近、和睦、团结的意思。就像水和地互相依存，人与人之间也需要亲密合作。",
+      "卦辞说「比，吉。原筮元永贞，无咎。不宁方来，后夫凶」——亲比团结是吉利的。一开始就要诚心诚意，这样就不会有灾祸。但如果犹豫不决、姗姗来迟，就会凶险。",
+      "比卦告诉我们：在人际交往中，真诚比什么都重要。初六「有孚比之」——用诚信去亲近别人，就像装满酒的瓦罐一样，诚意自然会满溢出来。六二「比之自内」——发自内心地亲近，而不是表面的应酬。"
+    ],
+    stories: [
+      {
+        title: "管鲍之交——比之自内的千古友谊",
+        text: "管仲和鲍叔牙年轻时一起做生意，管仲总多拿钱，鲍叔牙不认为他贪——知道他家里穷。管仲帮鲍叔牙办事总是搞砸，鲍叔牙不认为他笨——知道时机不好。管仲三次做官三次被赶走，鲍叔牙不认为他无能——知道没遇到对的人。后来两人各为其主，鲍叔牙却力荐管仲为相。管仲感慨：「生我者父母，知我者鲍子也！」这正是比卦最好的诠释——真正亲近的人，不计较一时得失，而是从内心深处理解和信任。",
+        source: "《史记·管晏列传》"
+      }
+    ],
+    disaster: "上六「比之无首凶」——没有首领的比附是凶险的。在团队中缺乏核心领导，大家各自为政，必然混乱。还有「后夫凶」——机会来了不赶紧抓住，犹豫不决就会被甩在后面。",
+    avoidance: "① 与人交往以诚相待（有孚比之）。② 发自内心的亲近（比之自内），不要虚情假意。③ 在新的环境中主动融入，不要做「后夫」。④ 选好团队和伙伴，不要亲近不该亲近的人（比之匪人）。"
+  },
+  "小畜": {
+    baihua: [
+      "小畜卦上巽（风）下乾（天），代表「风行天上」——风吹过天空，还未形成雨，只是小小的积聚。小畜就是小有积蓄的意思，好比刚开始工作攒了点钱，虽然不多但是个好的开始。",
+      "卦辞说「小畜，亨。密云不雨，自我西郊」——天空乌云密布，但还没下雨。这是蓄积力量的阶段。就像水烧到90度还没开，虽然差一点，但不能心急——继续加热就是。",
+      "九三「舆说辐，夫妻反目」——车子的辐条脱落，夫妻闹矛盾。这是在小有积蓄的阶段容易出现的内部问题。比如一个创业团队刚赚了第一桶金，就为了分钱闹矛盾。"
+    ],
+    stories: [
+      {
+        title: "韩信攻散关——小畜积蓄终破敌",
+        text: "韩信率汉军攻打散关，初战不利。他没有急于强攻，而是屯兵休整，一方面稳定军心，一方面用疑兵之计迷惑敌军。等到时机成熟，一举攻破散关。这正是小畜卦的真谛——不是不前进，而是在积蓄力量等待最合适的时机。",
+        source: "《史记·淮阴侯列传》"
+      }
+    ],
+    disaster: "「密云不雨」——事情看似要成了，但总差一口气。这时候最忌急躁冒进，就像水没烧开就关火，前功尽弃。九三「夫妻反目」也警示：小有成就时内部分配容易出问题。",
+    avoidance: "① 积蓄阶段不心急，继续努力，等待水到渠成。② 处理好小团队内部的利益分配，避免因小失大。③ 保持低调，「懿文德」（修炼品德和能力），不要过早炫耀。④ 量力而行，不要在小积蓄阶段就做大投资。"
+  },
+  "履": {
+    baihua: [
+      "履卦上乾（天）下兑（泽），代表「上天下泽」——天在上、泽在下，尊卑有序。履的本义是「踩」或「鞋子」，引申为践履、行动。古人说「履虎尾，不咥人」，就是踩着老虎尾巴走路，但老虎不咬你——形容行事极其危险但最终平安。",
+      "卦辞「履虎尾，不咥人，亨」告诉我们：即使身处危险境地，只要态度恭敬、行事谨慎，就能化险为夷。就像在薄冰上行走，小心翼翼反而能安全到达。",
+      "九二「履道坦坦，幽人贞吉」——大路平坦，隐士坚守正道就会吉利。九四「履虎尾，愬愬终吉」——就算踩了老虎尾巴，保持恐惧谨慎最终也会吉。核心意思就是一个：谨慎！"
+    ],
+    stories: [
+      {
+        title: "子路结缨——履虎尾的大勇",
+        text: "孔子的弟子子路在卫国做官，卷入政变。战斗中他帽子的带子被击断，子路说：「君子死，冠不免。」从容系好帽带后才倒地身亡。子路素以勇猛著称，这正是履卦的写照——敢于走在最危险的前线（履虎尾），但内心始终保持君子的操守。",
+        source: "《左传·哀公十五年》"
+      }
+    ],
+    disaster: "六三「眇能视，跛能履，履虎尾咥人凶」——一只眼看东西、一条腿走路，还去踩老虎尾巴，必定被咬。不自量力、没有自知之明是最危险的。",
+    avoidance: "① 任何时候都要谨慎，越是看似安全越要小心。② 有自知之明，不要做超出自己能力范围的事。③「履道坦坦」——走正道、走大路，不要走捷径。④ 保持敬畏心（愬愬），恐惧谨慎反而能保全。"
+  },
+  "泰": {
+    baihua: [
+      "泰卦上坤（地）下乾（天），代表「天地交」——天在下、地在上，看似颠倒，实则天地之气互相交融。泰就是通泰、安泰的意思，是六十四卦中最吉利的卦之一。",
+      "卦辞「泰，小往大来，吉亨」意思是：失去的小、得到的大，付出少而收获多，大吉大利。从自然现象看，天气上升、地气下降，阴阳交合，万物生长，这就是「泰」。",
+      "初九「拔茅茹以其汇」——拔茅草时会连根带起同类。比喻君子做事会带动大家一起进步。九三「无平不陂，无往不复」——没有只平不陡的路，没有只去不回的事，提醒你在顺境中也要保持清醒。"
+    ],
+    stories: [
+      {
+        title: "尧帝禅让——天下为公的泰运",
+        text: "尧帝在位七十年，年迈时问群臣谁可以继位。有人推荐他的儿子丹朱，尧说：「丹朱不肖，我不能因为偏爱儿子而害了天下人。」于是他遍访贤人，最终发现了舜。尧将两个女儿嫁给舜，考验其德行，最后将天下禅让给舜。这正是泰卦「小往大来」——尧放弃私利（小往），成就了天下大治（大来）。",
+        source: "《史记·五帝本纪》"
+      }
+    ],
+    disaster: "上六「城复于隍」——城墙倒塌在护城壕里。泰极则否来，顺境的尽头就是逆境。最危险的时刻恰恰是在你最得意的时候。九三「无平不陂」也警告：平坦的路尽头一定有陡坡。",
+    avoidance: "① 顺境中保持忧患意识，居安思危。②「艰贞无咎」——即使在顺利时也要以艰苦的心态坚守正道。③ 帮助身边的人共同进步（拔茅茹）。④ 不要因为一时顺利就铺张浪费、得意忘形。"
+  },
+  "否": {
+    baihua: [
+      "否卦上乾（天）下坤（地），与泰卦正好相反——天在上、地在下，看似正常，实则天地之气不相交。否就是闭塞不通的意思。就像冬天万物凋零，天地之间缺乏交流，一切都停滞了。",
+      "卦辞说「否之匪人，不利君子贞，大往小来」——在否塞的时代，做君子是很艰难的，付出很多而收获很少。孔子在《象传》中说「君子以俭德辟难」——在乱世中要收敛才华，不炫耀富贵，以免招来祸患。",
+      "否卦虽然不吉利，但九五「休否，大人吉」告诉我们：否极终究会泰来。九五居中正之位，说明只要有大德之人出现，就能扭转局面。「其亡其亡，系于苞桑」——时刻保持警惕，像拴在桑树根上一样牢牢站稳。"
+    ],
+    stories: [
+      {
+        title: "勾践卧薪尝胆——否极泰来的典范",
+        text: "越王勾践被吴王夫差打败，沦为阶下囚。他穿着粗布衣服，睡在柴草上，每天尝苦胆提醒自己不忘耻辱。表面上对夫差百依百顺，暗中却积极准备。三年后获释回国，他励精图治，最终一举灭吴。这正是否卦的智慧——否塞之时，守正待时，积蓄力量，终有否极泰来的一天。",
+        source: "《史记·越王勾践世家》"
+      }
+    ],
+    disaster: "否卦本身就是凶兆。最危险的是在否塞时强行出头，六三「包羞」——做不该做的事，自取其辱。",
+    avoidance: "① 以「俭德辟难」——收敛才华，低调生活，不要张扬。②「不可荣以禄」——不要贪图富贵利禄，先求自保。③ 坚信否极泰来，黑暗终会过去。④ 居安思危，时刻准备好。"
+  },
+  "同人": {
+    baihua: [
+      "同人卦上乾（天）下离（火），代表「天与火」——火向上燃烧，与天相应。同人就是与人和同、团结合作的意思。火焰照亮天空，象征着光明正大的合作。",
+      "卦辞「同人于野，亨。利涉大川，利君子贞」——在广阔的野外与人和同，亨通顺利。孔子在《彖传》中说「唯君子为能通天下之志」——只有君子才能沟通天下人的心志。",
+      "初九「同人于门」——在门口就与人合作，没有偏私。九四「乘其墉，弗克攻」——试图攻击对方，但最终没打——说明即使有分歧也能化解。九五「同人先号咷而后笑」——起初矛盾冲突，最终握手言和。"
+    ],
+    stories: [
+      {
+        title: "蔺相如与廉颇——将相和",
+        text: "蔺相如完璧归赵后，位居廉颇之上。廉颇不服，扬言要羞辱他。蔺相如处处回避，门客不解。蔺相如说：「秦国不敢打赵国，是因为有我和廉将军在。如果两虎相斗，必然不能共存。我以国家之急为先，私仇为后。」廉颇听说后，负荆请罪，两人成为刎颈之交。这正是同人卦的完美诠释——以大局为重，求同存异。",
+        source: "《史记·廉颇蔺相如列传》"
+      }
+    ],
+    disaster: "六二「同人于宗吝」——只跟同宗族的人合作，心胸狭隘，会有麻烦。搞小圈子、拉帮结派，最终会孤立自己。九三「伏戎于莽」——说明在合作中耍心眼会坏事。",
+    avoidance: "① 与人合作要心胸开阔（同人于野），不要搞小圈子。② 有了分歧及时沟通（先号咷而后笑），矛盾摊开了反而容易解决。③ 以大局为重，不计较个人得失。④ 光明正大地合作。"
+  },
+  "大有": {
+    baihua: [
+      "大有卦上离（火）下乾（天），代表「火在天上」——太阳高悬天空，普照万物。大有就是大丰收、大拥有的意思。这是非常吉利的卦，古人说「自天祐之，吉无不利」。",
+      "卦辞只有四个字「大有，元亨」——只要拥有了一切美好的东西，自然大亨通。但大有卦的智慧在于：拥有越多，责任越大，越要谦虚谨慎。",
+      "九二「大车以载」——用大车装载财物，说明财富很多。六五「厥孚交如威如」——以诚信待人，自然就有威望。上九「自天祐之，吉无不利」——连上天都保佑他，做什么都吉利。但前提是前面的每一步都走对了。"
+    ],
+    stories: [
+      {
+        title: "蔺相如完璧归赵——大有智慧的运用",
+        text: "秦王想用十五座城换和氏璧，赵王派蔺相如出使。蔺相如见秦王无意给城，机智地让璧玉有瑕，拿回手中，怒斥秦王的无信，以死相逼。最终完璧归赵，不辱使命。这正是大有卦的智慧——拥有宝物时，不仅要勇敢，更要有智慧来守护。",
+        source: "《史记·廉颇蔺相如列传》"
+      }
+    ],
+    disaster: "大有卦虽然吉利，但最大的危险是富而骄。九四「匪其彭」——不要炫耀自己的财富。历史上多少富豪因为炫富招来祸患。另一个危险是虽有财富却心胸狭隘，不肯帮助他人。",
+    avoidance: "① 富有后要保持谦虚（匪其彭）。② 以诚信待人（厥孚交如），财富越多越要厚道。③ 乐于分享，帮助身边的人共同富裕。④ 顺应天道，不做为富不仁的事。"
+  },
+  "谦": {
+    baihua: [
+      "谦卦上坤（地）下艮（山），代表「地中有山」——山本高于地，但却藏在地下。这就是谦虚的真谛：明明有高山般的才华和成就，却低调收敛如平地。谦卦是六十四卦中唯一六爻皆吉的卦。",
+      "卦辞「谦，亨，君子有终」——谦虚的人一切顺利，最终会有好结果。《彖传》说「天道亏盈而益谦，地道变盈而流谦」——天的规律是减少骄傲者、帮助谦虚者；地的规律是改变满的、流向低的。就像水往低处流，谦虚的人自然而然会得到好处。",
+      "初六「谦谦君子」——谦而又谦，才是真正的君子。九三「劳谦君子有终吉」——有功劳而又谦虚，这样的人最终一定吉利。上六「鸣谦」——谦虚的名声远播。"
+    ],
+    stories: [
+      {
+        title: "文王系袜带——真正的谦虚",
+        text: "周文王征伐崇国时，袜子带松了，左右看看没有可以指使的人，就自己蹲下系好。姜太公问他为什么不叫别人帮忙，文王说：「上等的君主，身边都是老师；中等的君主，身边都是朋友；下等的君主，身边都是可供使唤的人。我身边的都是先君的旧臣，没有可以供我使唤的。」姜太公从此更加敬佩文王，全力辅佐他成就大业。这正是谦卦最生动的诠释。",
+        source: "传《六韬》"
+      }
+    ],
+    disaster: "谦卦本身很吉利，但它的反面——骄傲自满——就是最大的灾难。「满招损，谦受益」是千古不变之理。一个人如果有了功劳就骄傲，有了地位就傲慢，离灾祸就不远了。",
+    avoidance: "① 越有本事越要谦虚（谦谦君子）。② 有功劳时不居功自傲（劳谦）。③ 时刻保持低调，像山藏于地一样不显山露水。④ 虚心向所有人学习，不摆架子。"
+  },
+  "豫": {
+    baihua: [
+      "豫卦上震（雷）下坤（地），代表「雷出地奋」——雷声从大地中爆发出来，万物振奋。豫就是愉悦、安乐的意思，也有事先准备的含义。这就像春天第一声春雷，万物复苏，充满了欢快的氛围。",
+      "卦辞「豫，利建侯行师」——在愉悦的氛围中，适合建立功业、出兵行事。好的心情和氛围确实能让事情事半功倍。",
+      "但豫卦也有警示：初六「鸣豫凶」——沉迷于享乐，到处张扬快乐，反而会招来凶险。六二「介于石，不终日」——像石头一样坚定，才能长久保持安乐。这告诉我们：享受快乐要有度，不能过度放纵。"
+    ],
+    stories: [
+      {
+        title: "诸葛亮征南中——豫卦的从容",
+        text: "诸葛亮南征孟获时，七擒七纵。每次抓住孟获，诸葛亮都像没事一样从容不迫，该喝酒喝酒，该下棋下棋。他深知「攻心为上，攻城为下」，最终让孟获心悦诚服。这正是豫卦「顺以动」——从容不迫、顺应形势而行动，反而事半功倍。",
+        source: "《三国志·蜀书·诸葛亮传》"
+      }
+    ],
+    disaster: "初六「鸣豫凶」——沉溺享乐并到处炫耀，必生祸患。就像隋炀帝杨广，沉迷享乐，巡游江南，劳民伤财，最终亡国。上六「冥豫」——在昏暗中享乐，不分是非，也会招灾。",
+    avoidance: "① 快乐要有节制，不要放纵。②「介于石」——内心要像石头一样正直坚定，不为享乐所动摇。③ 凡事豫则立——提前做好计划，不打无准备之仗。④ 在快乐时也要保持清醒，不要得意忘形。"
+  },
+  "随": {
+    baihua: [
+      "随卦上兑（泽）下震（雷），代表「泽中有雷」——雷在沼泽中震动。随就是随从、跟随的意思。但随卦强调的不是盲目跟从，而是择善而从。",
+      "卦辞说「随，元亨利贞，无咎」——随顺之道最重要的是「贞」——坚守正道的跟随才吉利。",
+      "初九「官有渝，贞吉，出门交有功」——职位的变动是正常的，只要坚守正道就吉利。六二「系小子，失丈夫」——贪图小的就会失去大的。"
+    ],
+    stories: [
+      {
+        title: "孙膑围魏救赵——择善而从",
+        text: "孙膑与庞涓一起学习兵法，庞涓嫉妒其才能，设计陷害。孙膑逃离魏国到齐国做田忌的军师。齐魏交战时，孙膑提出「围魏救赵」，在桂陵设伏大败魏军。孙膑选择了正确的君主和策略，正是随卦的智慧。",
+        source: "《史记·孙子吴起列传》"
+      }
+    ],
+    disaster: "六二「系小子，失丈夫」——贪图眼前小利而失去长远大利。最怕的是跟错了人、站错了队。",
+    avoidance: "① 跟对人很重要，选择有德有才的领导者。② 不要盲目跟风，要有自己的判断。③「出门交有功」——走出小圈子，广泛交友。④ 随顺但不谄媚，保持独立人格。"
+  },
+  "蛊": {
+    baihua: [
+      "蛊卦上艮（山）下巽（风），代表「山下有风」——风在山下回旋，时间长了会腐败。蛊本义是器皿中生的虫子，引申为腐败、弊病。这个卦讲的是：当事情出现了问题，应该如何整治和革新。",
+      "卦辞说「蛊，元亨，利涉大川。先甲三日，后甲三日」——整治腐败是好事，但有讲究：做之前先考虑三天（先甲），做之后还要观察三天（后甲），充分准备才能成功。",
+      "初六「干父之蛊」——纠正父亲的过失。六二「干母之蛊」——纠正母亲的过失。不逃避、勇于担当，就是蛊卦的精神。"
+    ],
+    stories: [
+      {
+        title: "伯乐疗马——发现问题要敢于面对",
+        text: "伯乐是相马师。有一次千里马生了怪病，没人能治。大家都说可惜了，干脆杀掉。伯乐说：「千里马难得，不能因为生病就放弃。」他仔细检查，发现了病因，治好了马。发现问题不要逃避，要敢于面对、善于解决。",
+        source: "民间故事，见《易经64卦384爻故事》"
+      }
+    ],
+    disaster: "蛊卦最大危险是发现问题却视而不见，任其腐败加深；或改革过于激进造成新的问题。",
+    avoidance: "① 发现问题不要拖延，越早处理越好。②「先甲三日，后甲三日」——改革前充分准备，改革后密切观察。③ 勇敢承担起纠正错误的职责。④ 改革时要讲究方法，不能蛮干。"
+  },
+  "临": {
+    baihua: [
+      "临卦上坤（地）下兑（泽），代表「泽上有地」——大地高临于沼泽之上。临是居高临下、亲临督导的意思。卦象告诉我们：领导者要有亲和力，要亲临一线。",
+      "卦辞说「临，元亨利贞。至于八月有凶」——临卦总体吉利，但盛极而衰，要未雨绸缪、居安思危。",
+      "六爻讲了六种「临」：咸临（以感化领导）、甘临（以甜言蜜语领导）、至临（亲临一线）、知临（以智慧领导）、敦临（以敦厚领导）。核心是用心而不是用权来领导。"
+    ],
+    stories: [
+      {
+        title: "尧帝访贤——至临的表率",
+        text: "尧帝年老时，为找合适的继承人，亲自到民间走访。他在田间遇见舜，经过多年考验，发现舜确实贤德，于是将帝位禅让给舜。尧帝以天子之尊亲临民间访贤，正是「至临无咎」。",
+        source: "《史记·五帝本纪》"
+      }
+    ],
+    disaster: "六三「甘临，无攸利」——用甜言蜜语取悦领导或下属，最终没有好处。「至于八月有凶」——盛极必衰。",
+    avoidance: "①「至临」——亲临一线，了解真实情况。②「知临」——凭智慧和能力领导。③「敦临」——以敦厚的品德服人。④ 居安思危，在顺境中做好应对逆境的准备。"
+  },
+  "观": {
+    baihua: [
+      "观卦上巽（风）下坤（地），代表「风行地上」——风吹过大地，无所不至。观就是观察、观望的意思。这个卦讲的是如何观察事物、审时度势。",
+      "卦辞说「观，盥而不荐，有孚颙若」——就像祭祀前洗手一样，态度要恭敬虔诚。观察事物也要有这种态度。",
+      "初六「童观」——像小孩子一样看问题，只看表面。六二「窥观」——从门缝里看，看不全面。九五「观我生」——观察反省自己的人生，这是最高级的观察——内省。"
+    ],
+    stories: [
+      {
+        title: "唐玄宗观棋——旁观者清",
+        text: "唐玄宗精通棋艺。有一次看两位棋手下棋，两人争执不休。玄宗从旁观察了一会儿，指出了一条双方都没看到的妙招。这正是观卦「观国之光」——善于观察的人，能给他人提供有价值的建议。",
+        source: "《唐语林》"
+      }
+    ],
+    disaster: "「童观」——像小孩子一样看问题，幼稚肤浅。「窥观」——从门缝里看人，眼光狭隘。在重要决策中，这两种方式都会导致失误。",
+    avoidance: "① 观察事物要全面深入，不能只看表面。②「观我生」——经常反省自己。③「观国之光」——观察大趋势，顺势而为。④ 做重要决定前，多角度收集信息。"
+  },
+  "噬嗑": {
+    baihua: [
+      "噬嗑卦上离（火）下震（雷），代表「雷电交加」——雷声和闪电同时发作。噬嗑就是咬合的意思，像吃东西时上下牙齿咬合，把硬物嚼碎。这个卦讲的是：遇到障碍和困难时，要有决心和力量去克服。",
+      "卦辞说「噬嗑，亨，利用狱」——亨通，有利于处理案件。诉讼就像嘴里有硬物阻碍，需要咬碎它才能顺畅。",
+      "初九「屦校灭趾」——脚上戴了刑具盖住了脚趾。六二「噬肤灭鼻」——咬软肉却把鼻子都陷进去了。这些比喻告诉你：处理问题要掌握好力度。"
+    ],
+    stories: [
+      {
+        title: "苏秦合纵——咬碎困难终成大业",
+        text: "苏秦游说六国合纵抗秦，初时处处碰壁，回到家妻子不下织机、嫂子不给做饭。他没有气馁，头悬梁、锥刺股继续苦读。再次出发后，终于说服六国，身佩六国相印。这正是噬嗑卦的写照——咬碎困难、打通关节，终成大业。",
+        source: "《史记·苏秦列传》"
+      }
+    ],
+    disaster: "九四「噬干胏，得金矢」——处理问题时遇到意外的硬骨头和风险。上九「何校灭耳」——罪大恶极导致严重后果。",
+    avoidance: "① 遇到问题不回避，果断面对。② 处理问题要掌握分寸和火候。③ 面对顽固障碍，要有耐心和方法。④ 公平公正地处理矛盾。"
+  },
+  "贲": {
+    baihua: [
+      "贲卦上艮（山）下离（火），代表「山下有火」——山脚下火光闪烁，照亮了山野。贲就是装饰、文饰的意思。这个卦讲的是外表和内涵的关系。",
+      "卦辞说「贲，亨，小利有攸往」——贲卦亨通，但只是小有好处。因为装饰毕竟是外在的，不能过分追求。",
+      "上九「白贲，无咎」——返璞归真，以质朴为美，反而没有过错。这是贲卦的最高境界：真正的美不在于华丽的装饰，而在于自然的本质。修饰到了极致，终将回归朴素。"
+    ],
+    stories: [
+      {
+        title: "管仲与鲍叔牙——重内涵轻外表",
+        text: "管仲和鲍叔牙一起做生意，管仲总多拿钱。不了解的人都觉得管仲贪财，鲍叔牙却知道他家里穷。管仲三次做官三次被赶走，别人觉得他无能，鲍叔牙知道他没遇到好机会。这种超越外表的深刻理解，正是「白贲」的境界。",
+        source: "《史记·管晏列传》"
+      }
+    ],
+    disaster: "贲卦最忌过分追求外表。初九「贲其趾，舍车而徒」——装饰了脚趾却放弃坐车，本末倒置。",
+    avoidance: "① 注重内在修养，不要只做表面功夫。② 返璞归真（白贲），真正的美在质朴。③ 判断人事不要被表面现象迷惑。④ 适当修饰可以，但不要本末倒置。"
+  },
+  "剥": {
+    baihua: [
+      "剥卦上艮（山）下坤（地），代表「山附于地」——山石崩落在地上。剥就是剥落、侵蚀的意思。这个卦象很不吉利——阴气从下往上不断侵蚀阳气，就像小人慢慢得势、君子逐渐退隐。",
+      "卦辞说「剥，不利有攸往」——剥落之时，不宜有所行动。《象传》说「上以厚下安宅」——在上位的人要厚待下面的人，才能安居。",
+      "六爻从「剥床以足」到「剥床以肤」——从床脚烂到床板再到伤及皮肤。但上九「硕果不食」——剥到最后还剩下一个果实没有烂掉，这就是希望的种子。剥极必复。"
+    ],
+    stories: [
+      {
+        title: "吕后专权——剥极必复",
+        text: "汉高祖去世后，吕后掌权。她剥夺众王封地、迫害戚夫人，几乎让吕氏取代刘氏天下。最终周勃、陈平等老臣联合铲除吕氏势力，迎立汉文帝。这正是剥极必复——黑暗之后必有光明。",
+        source: "《史记·吕太后本纪》"
+      }
+    ],
+    disaster: "剥卦本身就是凶兆。问题从根本开始腐烂（剥床以足），最终伤及自身（剥床以肤）。",
+    avoidance: "① 发现苗头不对要及时防范。②「厚下安宅」——厚待下属，稳固根基。③ 身处剥落之时要谨慎自保，等待时机。④ 坚信剥极必复，黑暗总会过去。"
+  },
+  "复": {
+    baihua: [
+      "复卦上坤（地）下震（雷），代表「雷在地中」——冬天雷声藏于大地深处，等待春天到来。复就是回复、复兴的意思，是剥卦的反面——剥极而复，一阳来复。",
+      "卦辞说「复，亨。反复其道，七日来复」——回复的时候亨通，天道循环，任何事物发展到极端都会向相反方向转化。",
+      "初九「不远复」——走得不远就回头，没有大悔。上六「迷复凶」——迷路太远才想回头，就晚了。这和孔子说的「知错能改，善莫大焉」是同一个道理。"
+    ],
+    stories: [
+      {
+        title: "唐太宗贞观之治——盛世复兴",
+        text: "隋朝末年天下大乱，百姓苦不堪言。唐太宗李世民即位后，以亡隋为鉴，励精图治。他虚心纳谏、任用贤能、减轻赋税，开创了贞观盛世。这正是复卦「一阳来复」的体现。",
+        source: "《旧唐书·太宗本纪》"
+      }
+    ],
+    disaster: "上六「迷复凶」——犯错太深才想回头，往往来不及了。六三「频复厉」——反复犯同样的错误，每次改了又犯，也是危险的。",
+    avoidance: "① 做错事要及时回头（不远复），不要等酿成大祸才后悔。② 不要反复犯同样的错误（频复厉）。③ 坚信一切都会好转，黑暗之后必有黎明。"
+  },
+  "无妄": {
+    baihua: [
+      "无妄卦上乾（天）下震（雷），代表「天下雷行」——雷在天上滚动，警示万物。无妄就是不妄为、顺其自然的意思。这个卦告诉你：不要做非分之想，老老实实走正道最安全。",
+      "卦辞说「无妄，元亨利贞。其匪正有眚，不利有攸往」——不妄为就会亨通顺利。但如果心术不正（匪正），就会招来灾祸。",
+      "六三「无妄之灾」——无缘无故飞来横祸。比如有人拴了头牛被路人顺手牵走，邻居却被怀疑偷牛。这是无妄之灾的真正含义——有时候灾难会无缘无故降临，只能泰然处之。"
+    ],
+    stories: [
+      {
+        title: "李广难封——无妄之灾的叹息",
+        text: "汉代名将李广一生征战七十余次，战功赫赫，却始终未能封侯。他曾问占卜者原因，对方说：「将军曾杀害已经投降的羌人，这是最大的不义。」李广最终迷路自杀。这正是无妄卦的警示——看似无关的过错，最终会带来意外的灾祸。",
+        source: "《史记·李将军列传》"
+      }
+    ],
+    disaster: "六三「无妄之灾」——飞来横祸，防不胜防。上九「无妄行有眚」——在不该行动的时候硬要行动，必然有灾。",
+    avoidance: "① 安分守己，不要妄动。② 即使遭遇无妄之灾，也要泰然处之（「勿药有喜」——不乱用药自然会好）。③ 保持心正，不做亏心事。④ 顺其自然，不要强求。"
+  },
+  "大畜": {
+    baihua: [
+      "大畜卦上艮（山）下乾（天），代表「天在山中」——天被包含在山中。大畜就是大的积蓄、包容。要像大山包容天空一样，不断积累知识和品德。",
+      "卦辞说「大畜，利贞。不家食吉，利涉大川」——利于坚守正道。不局限于自家小天地，出去闯荡才吉利。",
+      "上九「何天之衢，亨」——通向了天道的大路。经长期积累，最终达到豁然贯通的境界。"
+    ],
+    stories: [
+      {
+        title: "尧帝积累德政——厚积薄发",
+        text: "尧帝年轻时在民间劳作，积累了丰富的治理经验，深知百姓疾苦。被推举为天子后充分发挥多年积累的才能，开创了太平盛世。这正是大畜卦「何天之衢」——积蓄到了极致自然会通达。",
+        source: "《史记·五帝本纪》"
+      }
+    ],
+    disaster: "九二「舆说輹」——车轴脱落，有积累却无法行动，说明准备不足或过于保守。",
+    avoidance: "① 广泛学习积累，但不做「书呆子」。② 积累到一定程度就要勇于实践（利涉大川）。③ 多学习前人言行修养品德。④ 积蓄力量等待合适时机发挥。"
+  },
+  "颐": {
+    baihua: [
+      "颐卦上艮（山）下震（雷），代表「山下有雷」——雷在山下唤醒万物。颐就是颐养、养生的意思。讲的是如何养护身心、修养品德。",
+      "卦辞说「颐，贞吉。观颐，自求口实」——观察一个人养生方式，看他是靠自己劳动吃饭，还是靠别人养活。靠自己才是正道。",
+      "初九「舍尔灵龟，观我朵颐」——放着你的灵龟不研究，却看着我吃东西流口水。讽刺那些不自己努力只羡慕别人的人。"
+    ],
+    stories: [
+      {
+        title: "张骞寻河源——自求口实",
+        text: "张骞出使西域寻找黄河源头。他不畏艰险，越过葱岭，到达大宛、康居等地。途中困难重重，始终坚持靠自己的能力找水源和食物。这正是颐卦的体现。",
+        source: "《史记·大宛列传》"
+      }
+    ],
+    disaster: "初九「舍尔灵龟，观我朵颐」——放弃自己的优势去羡慕别人。上九长期依赖他人终究不是长久之计。",
+    avoidance: "① 自食其力（自求口实），不要依赖他人。②「慎言语，节饮食」——管住嘴，少说话，健康饮食。③ 不要羡慕他人，过好自己的日子。"
+  },
+  "大过": {
+    baihua: [
+      "大过卦上兑（泽）下巽（风），代表「泽灭木」——沼泽淹没了树木。大过就是过度的意思。在非常时期需要采取非常手段。",
+      "卦辞说「大过，栋桡，利有攸往，亨」——房梁弯曲了，一般方法已不管用，需要非常规手段。",
+      "九二「枯杨生稊」——枯老的杨树发新芽。九五「枯杨生华」——枯老的杨树开了花。在极端情况下仍有生机。但上六「过涉灭顶」——做事太过分会被淹没。"
+    ],
+    stories: [
+      {
+        title: "姜太公八十遇文王——非常时期非常人才",
+        text: "姜太公八十岁遇周文王。一般人到八十岁认命了，但他用直钩钓鱼等待明主，最终辅佐文王武王灭商建周，成为一代名相。这正是「枯杨生稊」——看似不可能的情况下创造奇迹。",
+        source: "《史记·齐太公世家》"
+      }
+    ],
+    disaster: "上六「过涉灭顶」——做得太过分，像涉水过河被淹没。九三「栋桡凶」——支撑结构出了大问题。",
+    avoidance: "① 非常时期可用非常手段，但要有底线。② 在绝望中寻找希望（枯杨生稊）。③ 做事掌握好度，过犹不及。④ 独立不惧，勇于担当。"
+  },
+  "坎": {
+    baihua: [
+      "坎卦上下都是坎（水），代表重重险难。坎就是坑、陷阱。两个坎卦叠加，意味着困境接二连三。这个卦告诉你：人生难免陷入困境，关键是面对方式。",
+      "卦辞说「习坎，有孚维心亨，行有尚」——虽重重险难，但心中保持诚信就能通过。",
+      "六四「樽酒簋贰，用缶」——在险难中用简朴器皿装酒菜，从窗户递进去。保持简朴和诚信，最终不会有灾祸。"
+    ],
+    stories: [
+      {
+        title: "司马迁忍辱著《史记》——坎卦的坚韧",
+        text: "司马迁因李陵之祸下狱受宫刑。他曾想死，但以文王演周易、孔子作春秋、屈原赋离骚等先贤自勉，忍辱负重完成《史记》。这正是「维心亨」——内心有信念就能通过一切困境。",
+        source: "《汉书·司马迁传》"
+      }
+    ],
+    disaster: "初六「入于坎窞」——掉进深坑越陷越深。上六「系用徽纆」——被囚禁三年不得解脱。坎卦困境相当严重。",
+    avoidance: "① 保持内心诚信（有孚维心亨），这是脱离困境的根本。② 在困境中保持简朴和低调。③ 坚持学习和修养。④ 相信虽处险境，不失诚信终能脱困。"
+  },
+  "离": {
+    baihua: [
+      "离卦上下都是离（火），代表光明接连升起。离是附丽、光明的意思，代表火、太阳、文明，是充满希望和智慧的卦。",
+      "卦辞说「离，利贞，亨。畜牝牛吉」——利于坚守正道，亨通。畜养温顺的母牛比喻培养柔顺中正的美德。",
+      "九三「日昃之离」——太阳西斜了，要及时行乐也要未雨绸缪。九四「突如其来如，焚如死如弃如」——突然燃起的大火可能带来毁灭。"
+    ],
+    stories: [
+      {
+        title: "勾践卧薪尝胆——文明重生",
+        text: "越王勾践被吴国打败后卧薪尝胆励精图治，重用文种范蠡，发展生产训练军队。经过二十年努力终于灭吴雪耻。这正是离卦「明两作」——黑暗之后光明重燃。",
+        source: "《史记·越王勾践世家》"
+      }
+    ],
+    disaster: "九四「突如其来如」——突如其来的灾难有毁灭性。上九征伐虽有功也有牺牲。",
+    avoidance: "① 保持内心光明正直。② 培养柔顺中正的品德。③ 珍惜时光不要虚度。④ 以文明之光温暖照亮他人。"
+  },
+  "咸": {
+    baihua: [
+      "咸卦上兑（泽）下艮（山），代表山上有湖泊，山水互相感应。咸就是感应的意思，讲人与人之间的心灵感应，特别是男女感情。",
+      "卦辞说「咸，亨，利贞，取女吉」——亨通，利于坚守正道，娶妻吉利。",
+      "六爻从「咸其拇」到「咸其辅颊舌」，描述感应从下到上、由浅入深的过程。只有发自内心的感应才能持久。"
+    ],
+    stories: [
+      {
+        title: "王昭君和番——感应与牺牲",
+        text: "王昭君出塞和亲，远嫁匈奴。她为了汉匈和平牺牲个人幸福，以真诚的感应沟通了不同民族的情感，这正是咸卦「感而遂通」。",
+        source: "《后汉书·南匈奴列传》"
+      }
+    ],
+    disaster: "六二「咸其腓凶」——急于行动反而凶险。九三「咸其股，执其随」——盲目跟随别人没有主见。",
+    avoidance: "① 与人交往贵在真诚感应。②「虚受人」——保持谦虚才能接受他人感应。③ 感情发自内心循序渐进。④ 在人际关系中保持敏感和真诚。"
+  },
+  "恒": {
+    baihua: [
+      "恒卦上震（雷）下巽（风），代表雷风互相配合和谐恒久。恒就是持久的意思，讲的是持之以恒的精神。",
+      "卦辞说「恒，亨，无咎，利贞，利有攸往」——恒久之道亨通。但前提是走正道且要有所行动。恒久不是一成不变，是在变化中保持恒心。",
+      "九三「不恒其德，或承之羞」——不能恒久保持品德会蒙受耻辱。孔子说「人而无恒，不可以作巫医」——人无恒心什么都做不成。"
+    ],
+    stories: [
+      {
+        title: "铁杵磨成针——恒心的力量",
+        text: "李白小时候不爱学习。看到老奶奶磨铁棒要做绣花针，惊讶问怎么可能。老奶奶说「只要功夫深，铁杵磨成针」。李白从此刻苦学习终成诗仙。这正是恒卦的精神。",
+        source: "民间故事"
+      }
+    ],
+    disaster: "初六「浚恒贞凶」——一开始追求过深恒久反凶险。九三「不恒其德或承之羞」——三分钟热度自取其辱。上六「振恒凶」——最后动摇前功尽弃。",
+    avoidance: "① 做事有恒心坚持到底。② 恒久不等于死板，要灵活变通。③ 从小事培养恒心。④ 善始善终不虎头蛇尾。"
+  },
+  "遁": {
+    baihua: [
+      "遁卦上乾（天）下艮（山），代表「天下有山」——天在高处，山在低处。遁就是退避、隐退的意思。这个卦告诉你：时机不对时，退让不是软弱而是智慧。",
+      "卦辞说「遁，亨，小利贞」——退避也是一种亨通，利于坚守正道。《彖传》说「刚当位而应，与时行也」——顺应时势而行动，该退就退。",
+      "九五「嘉遁贞吉」——最好的退避方式，坚守正道就会吉利。上九「肥遁，无不利」——从容退去，退得潇洒，没有任何不利。"
+    ],
+    stories: [
+      {
+        title: "孟尝君鸡鸣狗盗——遁卦的智慧",
+        text: "孟尝君被秦昭王扣留，门客中有人学狗叫偷出狐白裘献给秦王宠妃，又有人学鸡叫骗开函谷关城门。孟尝君得以逃脱。这正是遁卦的智慧——在危急时刻灵活退避，保存实力。",
+        source: "《史记·孟尝君列传》"
+      }
+    ],
+    disaster: "初六「遁尾厉」——该退的时候不果断，落在最后面，最危险。就像大家撤退你还在磨蹭，必然遭殃。",
+    avoidance: "① 该退就退，不要犹豫（「遁尾厉」——落在最后最危险）。②「嘉遁」——以最体面的方式退场。③「肥遁」——退得从容潇洒。④ 知进退存亡之道，不失其正。"
+  },
+  "大壮": {
+    baihua: [
+      "大壮卦上震（雷）下乾（天），代表「雷在天上」——雷声在天上轰鸣。大壮就是盛大强壮的意思。这个卦讲的是：在强大的时候如何自处，有力量不等于可以滥用力量。",
+      "卦辞说「大壮，利贞」——壮大之时，利于坚守正道。《象传》说「君子以非礼弗履」——君子不做不合礼的事。力量越大，越要遵守规矩。",
+      "九三「小人用壮，君子用罔」——小人滥用力量，君子却不敢用（罔=无）。真正的强大不是欺负别人，而是能克制自己。"
+    ],
+    stories: [
+      {
+        title: "汉武帝逐匈奴——大壮的克制",
+        text: "汉武帝时期国力强盛，卫青、霍去病数次出击匈奴，大获全胜。但汉武帝也懂得适可而止，没有继续穷追猛打，而是休养生息。这正是大壮卦「利贞」——强大时不滥用武力。",
+        source: "《史记·匈奴列传》"
+      }
+    ],
+    disaster: "初九「壮于趾」——只在脚趾上显示强壮，就急着行动，必然凶险。九三「羝羊触藩」——公羊壮了就去撞篱笆，结果角被卡住。比喻凭蛮力行事最终自取其辱。",
+    avoidance: "① 强大时更要有敬畏之心（非礼弗履）。② 克制自己比战胜别人更难。③「壮于大舆之輹」——把力量用在关键处。④ 不要逞强好胜（羝羊触藩）。"
+  },
+  "晋": {
+    baihua: [
+      "晋卦上离（火）下坤（地），代表「明出地上」——太阳从地平线升起。晋就是前进、晋升的意思。这个卦象征事业蒸蒸日上，前景光明。",
+      "卦辞说「晋，康侯用锡马蕃庶，昼日三接」——康侯被天子赏赐了很多马，一天被接见了三次。比喻人才得到赏识和重用。",
+      "初六「晋如摧如」——想要前进却被阻碍。六二「晋如愁如」——前进中充满忧愁。这些告诉你：即使在大好形势下，前进的道路上也会有挫折和困难，但坚持下去就会光明。"
+    ],
+    stories: [
+      {
+        title: "司马进拜相——晋卦的步步高升",
+        text: "司马进最初只是个小官，但他勤勉工作、才华出众，逐步得到提拔。每次升迁他都更加谨慎谦虚，最终成为宰相。这正是晋卦的写照——「昼日三接」，一天比一天光明，步步高升。",
+        source: "《史记·晋世家》"
+      }
+    ],
+    disaster: "九四「晋如鼫鼠，贞厉」——像鼫鼠一样虽有多种技能却样样不精，这是晋升路上的大忌。贪多嚼不烂，什么都会一点什么都不精，最终会被淘汰。",
+    avoidance: "①「自昭明德」——自己彰显自己的美德和才能。② 前进路上遇到挫折是正常的（晋如摧如、晋如愁如），坚持就好。③ 专精一门，不要贪多。④ 晋升越快越要谦虚谨慎。"
+  },
+  "明夷": {
+    baihua: [
+      "明夷卦上坤（地）下离（火），代表「明入地中」——光明陷入地下。明夷就是光明受伤的意思。这个卦象征黑暗时期——像商朝末年纣王无道，贤臣被残害。",
+      "卦辞说「明夷，利艰贞」——在光明受伤的时候，利于在艰难中坚守正道。你不是要硬碰硬，而是要像火在地下一样，虽然看不见但依然燃烧。",
+      "初九「明夷于飞，垂其翼」——受伤的鸟在飞，翅膀垂了下来。六二「明夷夷于左股」——左腿受伤。这都是比喻在黑暗时期的困顿处境。但六五「箕子之明夷」——箕子装疯自保，等待时局变化。"
+    ],
+    stories: [
+      {
+        title: "周文王被囚羑里——明夷的隐忍",
+        text: "周文王姬昌被商纣王囚禁在羑里长达七年。在牢狱中，文王没有怨恨绝望，而是将伏羲八卦推演为六十四卦，写成了《周易》卦辞。他以极大的隐忍和智慧度过了黑暗时期，最终被释放后成就了周朝八百年基业。这正是明夷卦的完美诠释——光明虽被遮蔽，却在地下继续燃烧。",
+        source: "《史记·周本纪》"
+      }
+    ],
+    disaster: "明夷卦本身就是光明受伤的凶兆。初九「垂其翼」——翅膀受伤，飞不动了。上六「初登于天，后入于地」——起初高高在上，最终坠入深渊，说明盛极而衰。",
+    avoidance: "① 在黑暗时期要隐忍自保（「用晦而明」——表面糊涂内心明白）。②像箕子一样装疯自保以待时机。③ 在艰难中坚守正道（利艰贞）。④ 利用黑暗时期充实提升自己，就像文王在狱中推演周易。"
+  },
+  "家人": {
+    baihua: [
+      "家人卦上巽（风）下离（火），代表「风自火出」——火燃烧产生热风。家人就是家庭的意思。这个卦讲的是家庭伦理和治家之道。",
+      "卦辞说「家人，利女贞」——家人卦利于女子坚守妇道。古人认为女主内、男主外，各安其位家庭才能和睦。今天看来，强调的是家庭成员各尽其责。",
+      "九三「家人嗃嗃，悔厉吉」——治家严厉虽然看着严厉，最终是吉利的。六四「富家，大吉」——家庭富裕是大好事。九五「王假有家」——君王以德感化家人，家庭和睦。"
+    ],
+    stories: [
+      {
+        title: "董永卖身葬父——家人卦的孝道",
+        text: "董永家境贫寒，父亲去世后无钱安葬。他卖身为奴换取丧葬费用。路上遇到一名女子（传说是七仙女），自愿嫁给他，帮他织锦还债。董永的孝心感动了上天。这正是家人卦的体现——家庭伦理中的孝道是最根本的品德。",
+        source: "民间故事，见《搜神记》"
+      }
+    ],
+    disaster: "初九「闲有家，悔亡」——治家不严（闲），会有后悔的事发生。九三「妇子嘻嘻，终吝」——家里嬉笑打闹没规矩，最终会有麻烦。治家太松或太严都不好。",
+    avoidance: "①「言有物而行有恒」——说话有根据，做事有恒心，这是治家的根本。② 家庭成员各尽其责、互相尊重。③ 治家宽严适度。④ 以诚信和身教感化家人（有孚威如）。"
+  },
+  "睽": {
+    baihua: [
+      "睽卦上离（火）下兑（泽），代表「上火下泽」——火往上烧、水往下流，方向相反。睽就是乖离、分歧的意思。这个卦讲的是如何处理分歧和矛盾。",
+      "卦辞说「睽，小事吉」——在分歧的时候，做小事吉利，大事不宜。意思是：有分歧时先从容易达成一致的小事做起，大事慢慢来。",
+      "上九「睽孤见豕负涂，载鬼一车」——在分歧严重时，看对方像看到猪身上涂满了泥、车上装满了鬼——完全扭曲了对方形象。最终「匪寇婚媾，往遇雨则吉」——原来不是敌人，和好如初。"
+    ],
+    stories: [
+      {
+        title: "诸葛亮与周瑜——睽而能合",
+        text: "赤壁之战前，诸葛亮和周瑜各为其主，互有猜忌。周瑜几次想除掉诸葛亮，诸葛亮也防着周瑜。但在大敌当前时，两人放下分歧、精诚合作，最终大败曹操。这正是睽卦「小事吉」——虽然分歧巨大，但在共同目标下求同存异，总能做出成绩。",
+        source: "《三国志·吴书·周瑜传》"
+      }
+    ],
+    disaster: "上九「睽孤」——分歧发展到极端，孤立无援。看谁都是坏人（载鬼一车），完全失去客观判断能力。这是最危险的。",
+    avoidance: "① 有分歧时要从「小事」入手，先易后难。②「求同存异」——睽卦的核心智慧。③ 不要因为分歧而完全否定对方（「见豕负涂」的扭曲心态要避免）。④ 宽宏大量，即使对恶人也要适度交往。"
+  },
+  "蹇": {
+    baihua: [
+      "蹇卦上坎（水）下艮（山），代表「山上有水」——山上有水，道路险阻。蹇就是艰难、跛脚走路的意思。这个卦讲的是面对困难的态度。",
+      "卦辞说「蹇，利西南，不利东北，利见大人，贞吉」——蹇卦利于往西南走（平坦方向），不利于往东北（险峻方向）。比喻遇到困难要选择有利的方向，不要硬闯。",
+      "初六「往蹇来誉」——往前走艰难，退回来反而受到赞誉。这不是教你要退缩，而是告诉你：有时候退一步是为了更好地前进。九五「大蹇朋来」——在最困难的时候，朋友会来帮助你。"
+    ],
+    stories: [
+      {
+        title: "刘邦白登之围——蹇卦的智慧",
+        text: "汉高祖刘邦被匈奴围困在白登山七天七夜。他没有硬拼，而是采纳陈平的计谋，贿赂匈奴王后，最终得以脱围。这正是蹇卦的智慧——遇到险阻，不硬拼、不蛮干，而是用智慧找到合适的出路。",
+        source: "《史记·匈奴列传》"
+      }
+    ],
+    disaster: "蹇卦本身就是险阻之象。初六「往蹇」——往前走都是困难。最危险的是明知前面是绝路却不回头。",
+    avoidance: "①「见险而能止」——看到危险能停下来，这是智慧。②「反身修德」——遇到困难先反省自己。③ 选择有利的方向（利西南），避开不利的（不利东北）。④ 在最困难的时候，朋友会来帮忙（大蹇朋来）。"
+  },
+  "解": {
+    baihua: [
+      "解卦上震（雷）下坎（水），代表「雷雨作」——雷雨发作，驱散暑气。解就是缓解、解除的意思。这个卦象征困难即将过去，局面开始好转。",
+      "卦辞说「解，利西南。无所往，其来复吉。有攸往，夙吉」——解卦利于向西南方向。如果无处可去，回来也是吉利的；如果有地方去，早点行动更吉利。",
+      "六三「负且乘，致寇至」——背着东西坐车，反而招来了盗贼。比喻位置和身份不匹配会招来麻烦。上六「公用射隼于高墉之上」——王公射下高墙上的鹰，解决了最后的隐患。"
+    ],
+    stories: [
+      {
+        title: "项羽垓下之围——解卦的困境",
+        text: "项羽被汉军围困在垓下，四面楚歌。他虽有万夫不当之勇，却大势已去。最终不肯过江东，自刎乌江。这正是解卦的反面教训——局势已经恶化到无法解除时，要懂得顺势而为。如果项羽能渡江休整，也许还有翻身机会。",
+        source: "《史记·项羽本纪》"
+      }
+    ],
+    disaster: "六三「负且乘，致寇至」——位置与能力不匹配，会招来灾祸。上六不彻底解决问题会留下后患。",
+    avoidance: "① 困难解除后要及时休整（「赦过宥罪」——宽恕过错、宽待他人）。② 问题要彻底解决，不留后患。③ 认清形势，顺势而为。④ 不要因为一时困境就失去信心。"
+  },
+  "损": {
+    baihua: [
+      "损卦上艮（山）下兑（泽），代表「山下有泽」——山脚下水泽侵蚀山体。损就是减损的意思。但有时候减损反而是好事，就像修剪树枝才能让树长得更好。",
+      "卦辞说「损，有孚，元吉无咎可贞」——损卦有诚信，大吉。主动减损自己是吉利的。",
+      "九二「利贞，征凶，弗损益之」——坚守正道，不要急于行动。不去减损反而能增益。有些事情不做比做更好。"
+    ],
+    stories: [
+      {
+        title: "薛仁贵收燕——损中求胜",
+        text: "薛仁贵征讨燕地时故意减少兵力示弱，引诱燕军出战。燕军以为薛仁贵兵力不足倾巢而出，薛仁贵早已设伏，一举大破燕军。这正是损卦智慧——表面减损实则增益。",
+        source: "《旧唐书·薛仁贵传》"
+      }
+    ],
+    disaster: "初九「已事遄往」——事情已发生才匆匆补救往往已晚。九二「征凶」——急于行动反凶险。",
+    avoidance: "① 主动减损（改正缺点、减少开销）是好事。②「损有余补不足」——把多余的拿出来补不足的。③ 有舍才有得。④ 减损要有度。"
+  },
+  "益": {
+    baihua: [
+      "益卦上巽（风）下震（雷），代表风雷互相增益。益就是利益、增益的意思。与损卦相反，讲如何获得增益。",
+      "卦辞说「益，利有攸往，利涉大川」——益卦利于行动，应积极进取。",
+      "初九「利用为大作」——适合有大作为。上九「莫益之，或击之」——不义之财不可得。"
+    ],
+    stories: [
+      {
+        title: "冉伯牛悔过——益卦修身",
+        text: "孔子弟子冉伯牛得了重病。孔子去看他，从窗户握着他的手叹息。冉伯牛反省自己的过错，更精进修行。增益不仅来自外部，更来自内心的反省。",
+        source: "《论语·雍也》"
+      }
+    ],
+    disaster: "上九「莫益之，或击之」——贪婪无度反而被攻击。六三「益之用凶事」——以不正当方式获益导致凶险。",
+    avoidance: "① 助人即助己（损上益下）。② 见善则迁，有过则改。③ 增益要取之有道。④ 布施雪中送炭，不贪不义之财。"
+  },
+  "夬": {
+    baihua: [
+      "夬卦上兑（泽）下乾（天），代表「泽上于天」。夬就是决断、果决的意思。讲关键时刻如何做决断。",
+      "卦辞说「夬，扬于王庭，孚号有厉」——决断要公开，虽有危险但要坦诚。",
+      "九四「臀无肤，其行次且」——该决断时犹豫不决。九五「苋陆夬夬」——像斩草一样果断。"
+    ],
+    stories: [
+      {
+        title: "汉高祖拜韩信——夬卦决断",
+        text: "刘邦想拜韩信为大将军但犹豫不决。萧何说：「大王如果只想做汉中王不用韩信；想争天下非韩信不可。」刘邦果断设坛拜将，韩信帮他打下半个天下。这正是夬卦的决断智慧。",
+        source: "《史记·淮阴侯列传》"
+      }
+    ],
+    disaster: "九四「臀无肤，其行次且」——该决断时犹豫不决。上六「无号，终有凶」——最后连呼救都来不及。",
+    avoidance: "① 该决断时必须果断。② 决断前要想清楚（「孚号」——诚信表态）。③ 先从自己能控制的事做起。④ 决断后敢于承担后果。"
+  },
+  "姤": {
+    baihua: [
+      "姤卦上乾（天）下巽（风），代表「天下有风」。姤就是相遇的意思。讲如何应对意外的相遇。",
+      "卦辞说「姤，女壮，勿用取女」——一方太强势关系就会失衡。",
+      "初六「系于金柅」——遇到意外要保持克制。九五「含章，有陨自天」——内心有美德好运自然降临。"
+    ],
+    stories: [
+      {
+        title: "吕后专权——姤卦警示",
+        text: "吕后在刘邦去世后强势掌权，压制刘氏宗亲大封吕氏。但她死后吕氏家族被连根铲除。一方过于强势关系必然失衡。",
+        source: "《史记·吕太后本纪》"
+      }
+    ],
+    disaster: "初六「羸豕孚蹢躅」——像瘦猪一样躁动不安，越急越错。上九「姤其角」——用角顶撞冲突难免。",
+    avoidance: "① 意外相遇可能带来机遇也可能带来麻烦，保持冷静。② 任何关系都要平衡。③ 保持内心美德（含章），以不变应万变。"
+  },
+  "萃": {
+    baihua: [
+      "萃卦上兑（泽）下坤（地），代表「泽上于地」——水泽汇聚大地。萃就是聚集的意思。讲人才聚集和团队凝聚。",
+      "卦辞说「萃，亨。王假有庙」——君王到宗庙聚集祖先灵魂，比喻领导者要聚拢人才。",
+      "初六「有孚不终，乃乱乃萃」——诚信不能坚持到底，团队就会混乱。"
+    ],
+    stories: [
+      {
+        title: "韩信被诛——萃散之祸",
+        text: "韩信为汉朝立下汗马功劳却被诱捕杀害。原因之一是他离开了刘邦的核心团队。无论多有能力都要在集体中找准自己的位置。",
+        source: "《史记·淮阴侯列传》"
+      }
+    ],
+    disaster: "初六「有孚不终」——诚信不能坚持到底，团队必然混乱。上六「赍咨涕洟」——众人离散后独自叹息。",
+    avoidance: "① 善于聚集人才（「除戎器，戒不虞」）。② 在团队中找到自己的位置。③ 诚信待人凝聚团队。"
+  },
+  "升": {
+    baihua: [
+      "升卦上坤（地）下巽（风），代表「地中生木」——树木从地中生长。升就是上升、晋升的意思。讲如何一步步走向高处。",
+      "卦辞说「升，元亨，用见大人，南征吉」——大亨通，利于拜见大人物。",
+      "初六「允升大吉」——诚信地上升大吉。六五「贞吉升阶」——沿台阶一步步上升。"
+    ],
+    stories: [
+      {
+        title: "房玄龄拜相——升卦典范",
+        text: "房玄龄从秦王府记室参军做起，靠勤奋和才华一步步升迁。每次升官都更谨慎谦逊。这正是升卦的写照——沿台阶一步步上升持久稳固。",
+        source: "《旧唐书·房玄龄传》"
+      }
+    ],
+    disaster: "上六「冥升」——在昏暗中盲目上升不知停止。一味追求升迁而不顾德行能力是否匹配，最终会摔得很惨。",
+    avoidance: "① 晋升靠积累和品德（「顺德，积小以高大」）。② 一步一个脚印。③ 升迁后更谦虚谨慎。"
+  },
+  "困": {
+    baihua: [
+      "困卦上兑（泽）下坎（水），代表「泽无水」——水泽干涸。困就是困境的意思。讲在困境中如何自处。",
+      "卦辞说「困，亨，贞大人吉无咎。有言不信」——困卦也能亨通，坚守正道就吉利。但在困境中说的话别人不信，所以要少说话。",
+      "九五「劓刖，困于赤绂，乃徐有说」——即使极端困顿，慢慢就会解脱。"
+    ],
+    stories: [
+      {
+        title: "李德裕罢相——困卦写照",
+        text: "名相李德裕在党争中落败被贬崖州。从宰相到边远小官，身处困境却不怨天尤人，在贬谪地传播中原文化。这正是「贞大人吉」——大人在困境中坚守正道名垂青史。",
+        source: "《旧唐书·李德裕传》"
+      }
+    ],
+    disaster: "初六「入于幽谷」——掉进幽暗山谷三年不见光明。上六「困于葛藟」——被藤蔓缠绕动弹不得。",
+    avoidance: "① 困境中坚守正道（贞大人吉）。②「有言不信」——少说多做。③「致命遂志」——坚守志向。④ 困境是暂时的保持耐心。"
+  },
+  "井": {
+    baihua: [
+      "井卦上坎（水）下巽（风），代表「木上有水」——木桶打水。井不变而水常新——不变的是本质变化的是现象。",
+      "卦辞说「井，改邑不改井」——城镇可变井不变。比喻有恒心和坚守的价值。",
+      "九五「井冽寒泉食」——井水清凉甘甜大家都来喝。比喻君子品德高尚众人受益。"
+    ],
+    stories: [
+      {
+        title: "安史之乱——井卦警示",
+        text: "唐玄宗宠爱杨贵妃，杨国忠得势，安禄山认杨贵妃为义母。朝政腐败最终爆发安史之乱。如果井水（朝廷）被污染就会祸及所有人。",
+        source: "《旧唐书·玄宗本纪》"
+      }
+    ],
+    disaster: "初六「井泥不食」——井里都是泥不能喝，比喻人堕落腐化。九二「瓮敝漏」——有资源但工具不行。",
+    avoidance: "① 像井一样保持本质不变同时不断更新。② 有才能要找用武之地。③「劳民劝相」——为民众服务互相帮助。④ 不断「淘井」——提升自我保持清澈。"
+  },
+  "革": {
+    baihua: [
+      "革卦上兑（泽）下离（火），代表「泽中有火」，水火不容。革就是变革的意思。讲改革的时机和方法。",
+      "卦辞说「革，巳日乃孚」——到了恰当的时机才能取信于人。改革不能搞突然袭击。",
+      "九五「大人虎变」——像老虎换毛一样焕然一新。改革要彻底。"
+    ],
+    stories: [
+      {
+        title: "商鞅变法——彻底变革",
+        text: "商鞅先「徙木立信」取信于民，然后推行一系列改革：废井田开阡陌奖励耕战推行县制。秦国从此强大。这正是革卦「巳日乃孚」先取信于人再「大人虎变」彻底变革。",
+        source: "《史记·商君列传》"
+      }
+    ],
+    disaster: "改革最忌：①时机不当；②改革不彻底（「革言三就」只说不做）；③动机不纯为私利。",
+    avoidance: "① 改革先取信于人再行动。② 时机成熟果断行动（顺天应人）。③ 改革要彻底不半途而废。④ 动机纯正为大局而非私利。"
+  },
+  "鼎": {
+    baihua: [
+      "鼎卦上离（火）下巽（风），代表「木上有火」——木柴烧鼎。鼎是烹饪器也是权力象征（问鼎中原）。讲如何培养和任用人才。",
+      "卦辞说「鼎，元吉，亨」——大吉大利。《象传》说「君子以正位凝命」——摆正位置凝聚使命。",
+      "初六「鼎颠趾，利出否」——倒鼎清除残渣，比喻清除旧的才能装新的。上九「鼎玉铉」——鼎的提手用玉装饰，大吉。"
+    ],
+    stories: [
+      {
+        title: "秦君得九鼎——权力的象征",
+        text: "九鼎是夏禹铸造的传国重器象征天下九州统治权。秦国统一天下后将九鼎迁到咸阳。鼎卦正是「正位凝命」——摆正位置才能承担重大使命。",
+        source: "《史记·秦本纪》"
+      }
+    ],
+    disaster: "九四「鼎折足，覆公餗」——鼎脚折断食物洒了。用错了人把事情搞砸了。",
+    avoidance: "① 用人要德才兼备，位置要摆正。②「正位凝命」——明确职责和使命。③先清除旧弊端（利出否）。④ 像烹饪一样掌握火候时机。"
+  },
+  "震": {
+    baihua: [
+      "震卦上下都是震（雷），代表双重的雷声。震就是震动、震惊的意思。讲的是临危不惧、处变不惊的修养。",
+      "卦辞说「震，亨。震来虩虩，笑言哑哑」——雷声来时令人恐惧，但谈笑自如。君子闻雷则恐惧修省，这反而是一种亨通。",
+      "初九「震来虩虩，后笑言哑哑吉」——雷来时害怕，过后谈笑自如，吉利。六五「震往来厉，亿无丧有事」——震动虽然激烈，但最终没有损失。"
+    ],
+    stories: [
+      {
+        title: "李靖替龙行雨——震卦的从容",
+        text: "李靖误入龙宫，龙母让他替龙行雨。李靖一介凡人突然要掌管下雨大事，但他毫不慌乱，按照天庭的指令行事。虽然过程中出了些小差错，但最终化险为夷官至仆射。这正是震卦「震来虩虩，笑言哑哑」——遇大事而有静气。",
+        source: "《唐传奇》"
+      }
+    ],
+    disaster: "上六「震索索，视矍矍，征凶」——吓得腿发抖、眼发花，这时行动必然凶险。六二「震来厉，亿丧贝」——震动中丢失了钱财。",
+    avoidance: "① 平日居安思危（「恐惧修省」——因恐惧而反省修德）。② 遇事保持冷静，处变不惊。③ 惊变之中先求自保再图后计。④ 笑对人生起伏。"
+  },
+  "艮": {
+    baihua: [
+      "艮卦上下都是艮（山），代表两座山重叠。艮就是停止的意思。这个卦讲的是适可而止、知止不殆的智慧。",
+      "卦辞说「艮其背，不获其身。行其庭不见其人，无咎」——止于适当之处，就像人的背部感觉不到自身。在庭院中行走而看不到人，没有灾祸。核心就是：该停的时候就停下来。",
+      "六爻从「艮其趾」到「敦艮吉」——从脚趾头到额头都能适可而止，最终大吉。其中六五「艮其辅，言有序」——管住自己的嘴（辅=脸颊），说话有条理，悔恨消失。"
+    ],
+    stories: [
+      {
+        title: "刘邦困荥阳——艮卦的坚守",
+        text: "刘邦被项羽围困在荥阳，形势危急。有人建议他突围硬拼，刘邦审时度势，决定坚守不出。同时派韩信开辟北方战场，调动项羽兵力。最终荥阳之围得解。这正是艮卦的智慧——知道什么时候该停止硬拼，换一种方式解决问题。",
+        source: "《史记·高祖本纪》"
+      }
+    ],
+    disaster: "艮卦最忌该止不止。九三「艮其限，列其夤，厉熏心」——想强行停止却止不住，像扭伤了腰一样痛苦，心急如焚。",
+    avoidance: "① 知道什么时候该停止是人生大智慧（「时止则止，时行则行」）。②「艮其辅，言有序」——管住嘴说话有分寸。③「思不出其位」——做好自己的本分不要越界。④ 知止不殆，可以长久。"
+  },
+  "渐": {
+    baihua: [
+      "渐卦上巽（风）下艮（山），代表「山上有木」——树木在山上缓慢生长。渐就是渐进、循序渐进的意思。这个卦讲的是事物发展的渐进性。",
+      "卦辞说「渐，女归吉，利贞」——女子出嫁吉利，但要按礼仪一步步来。比喻凡事都要按照步骤来，不能跳跃。",
+      "六爻以「鸿渐于干」（鸿雁飞到岸边）到「鸿渐于陆」（飞到高地），描述了鸿雁从水边到高地、从近到远的飞行过程，比喻事物发展的不同阶段。"
+    ],
+    stories: [
+      {
+        title: "齐晏子为相——渐卦的积累",
+        text: "晏子（晏婴）是齐国名相，身材矮小但才智超群。他并非一步登天，而是从基层做起，历经齐国三朝君主。每到一位国君时期，他都谨慎进谏、积累声望，最终成为一代贤相。这正是渐卦的典范——积小成大，循序渐进。",
+        source: "《史记·管晏列传》"
+      }
+    ],
+    disaster: "渐卦危险在于贪快冒进。九三「夫征不复，妇孕不育」——丈夫出征不回来，妻子怀孕不生育。比喻急于求成反而导致失败。",
+    avoidance: "① 做事要一步一个脚印（渐进）。② 欲速则不达，贪快反而慢。③ 积累信誉和能力是最稳妥的晋升之道。④ 按部就班走好每一步。"
+  },
+  "归妹": {
+    baihua: [
+      "归妹卦上震（雷）下兑（泽），代表「泽上有雷」。归妹就是少女出嫁的意思。这个卦讲的是婚姻和合作关系。",
+      "卦辞说「归妹，征凶，无攸利」——归妹卦征伐凶险，没有什么好处。为什么？因为婚姻是喜庆之事，不宜兵戎相见。比喻做事情要合乎身份和场合。",
+      "初九「归妹以娣」——妹妹陪姐姐一起出嫁（古代习俗）。九四「归妹愆期」——出嫁的日期推迟了。六五「帝乙归妹」——商王帝乙把妹妹嫁给周文王。这说明婚姻有时机的问题，错过了就要等。"
+    ],
+    stories: [
+      {
+        title: "帝乙归妹——政治联姻的智慧",
+        text: "商朝君主帝乙为了安抚日益强大的周部落，将自己的妹妹嫁给周文王姬昌。这是一场政治联姻，但商周之间因此保持了多年的和平。这正是归妹卦「帝乙归妹」——婚姻不仅是个人之事，也关系到邦交和合作。",
+        source: "《史记·殷本纪》"
+      }
+    ],
+    disaster: "归妹卦总体不吉。六三「归妹以须，反归以娣」——想当正妻却做了陪嫁。上六「女承筐无实，士刲羊无血」——祭祀时新娘的篮子空、新郎杀羊没出血，都是不祥之兆。",
+    avoidance: "① 婚姻和合作都要门当户对、各得其所。② 错过时机就要耐心等待（愆期迟归有时）。③ 不要强求不属于自己的位置。④ 以诚相待才能长久。"
+  },
+  "丰": {
+    baihua: [
+      "丰卦上震（雷）下离（火），代表「雷电皆至」——雷电交加声势浩大。丰就是丰盛、丰满的意思。这个卦讲的是事业鼎盛时如何自处。",
+      "卦辞说「丰，亨。王假之，勿忧，宜日中」——丰卦亨通。君王达到了鼎盛，但不要担忧，要保持像正午太阳一样中正光明。",
+      "六二「丰其蔀，日中见斗」——丰盛到了极点反而遮蔽了光明，大白天看到北斗星。比喻盛极则暗。上六「丰其屋，蔀其家」——屋子虽大却空无一人，三年不见人，凶险。"
+    ],
+    stories: [
+      {
+        title: "庄子说剑——丰卦的盛极而衰",
+        text: "庄子去见赵文王，文王好剑术，养了三千多名剑客。庄子以剑喻道，说了三种剑：天子之剑、诸侯之剑、庶人之剑。赵文王沉迷剑术导致国力衰败，这正是丰卦「日中见斗」——盛极则暗，要懂得收敛。",
+        source: "《庄子·说剑》"
+      }
+    ],
+    disaster: "上六「丰其屋，蔀其家」——屋子虽大却不见人，盛极而衰的典型。六二「日中见斗」——盛极遮蔽光明。丰卦的最大危险就是盛极必衰。",
+    avoidance: "① 鼎盛时要保持中正光明（宜日中）。② 盛极必衰，居安思危。③ 不要因为一时成功就得意忘形。④ 分享福泽给别人（「来章有庆誉吉」）。"
+  },
+  "旅": {
+    baihua: [
+      "旅卦上离（火）下艮（山），代表「山上有火」——火在山上燃烧，不能久留。旅就是旅行、寄居的意思。这个卦讲的是在外漂泊时的处世之道。",
+      "卦辞说「旅，小亨，旅贞吉」——旅卦小有亨通，在外旅行坚守正道就吉利。",
+      "六二「旅即次，怀其资，得童仆贞」——旅途中找到住处、带着钱财、有忠实的仆人。比喻在外的准备要充足。九三「旅焚其次，丧其童仆」——住处被烧、仆人跑了，倒霉。上九「鸟焚其巢」——像鸟巢被烧一样悲惨。"
+    ],
+    stories: [
+      {
+        title: "陈后主亡国——旅卦的悲哀",
+        text: "陈后主陈叔宝沉迷酒色不理朝政。隋军攻入建康时，他躲进枯井中被俘。从一国之君到阶下囚，最后客死长安。这正是旅卦上九「鸟焚其巢」——巢穴被毁无家可归。",
+        source: "《陈书·后主本纪》"
+      }
+    ],
+    disaster: "九三「旅焚其次，丧其童仆」——在外漂泊遇到火灾失去财物和帮手。上九「鸟焚其巢」——彻底失去依靠。旅卦在外时要格外小心。",
+    avoidance: "① 在外要低调谨慎（「明慎用刑而不留狱」——明察慎断不拖延）。② 准备充足再出发（「怀其资」）。③ 与人交往要真诚（得童仆贞）。④ 不要过于张扬。"
+  },
+  "巽": {
+    baihua: [
+      "巽卦上下都是巽（风），代表风随风而动。巽就是顺、入的意思，表示柔顺和渗透。这个卦讲的是以柔克刚、以退为进的智慧。",
+      "卦辞说「巽，小亨，利有攸往，利见大人」——巽卦小有亨通，利于行动，利于拜见大人物。",
+      "初六「进退，利武人之贞」——进退之间要像军人一样果断。九五「贞吉悔亡无不利」——坚守正道吉利，没有不利。上九「巽在床下，丧其资斧」——过于顺从就像钻到床底下，会失去安身立命的资本。"
+    ],
+    stories: [
+      {
+        title: "范蠡退隐——巽卦的智慧",
+        text: "范蠡助越王勾践灭吴后，没有贪恋富贵，而是辞官隐退，改名换姓做生意去了。他三次成为巨富又三次散尽家财。他深知「飞鸟尽良弓藏」的道理，以退为进保全了自己。这正是巽卦的智慧——柔顺谦退反而能长存。",
+        source: "《史记·越王勾践世家》"
+      }
+    ],
+    disaster: "上九「巽在床下，丧其资斧」——过于顺从反而失去了立身之本。初六「进退」犹豫不决也是大忌。",
+    avoidance: "① 以柔克刚以退为进。② 顺势而行不要逆势而动。③ 谦逊但不卑微顺从要有底线。④「申命行事」——明确指令再行动。"
+  },
+  "兑": {
+    baihua: [
+      "兑卦上下都是兑（泽），代表两个湖泊相连。兑就是喜悦、言说的意思。这个卦讲的是以喜悦的心态处世，以及如何正确地表达和交流。",
+      "卦辞说「兑，亨，利贞」——兑卦亨通，利于坚守正道。喜悦是好事，但要建立在正道之上。",
+      "初九「和兑吉」——和颜悦色地与人相处，吉利。九二「孚兑吉」——以诚信带来喜悦，吉利。六三「来兑凶」——刻意讨别人的欢心，凶险。"
+    ],
+    stories: [
+      {
+        title: "玄奘取经——兑卦的喜悦",
+        text: "玄奘法师西行取经，历经千辛万苦。但他内心充满求法的喜悦，每次讲到佛法时都「和兑」——和颜悦色。在印度那烂陀寺学习时，他以诚信（孚兑）感动了戒贤大师。玄奘用内心的喜悦和诚信完成了前人未竟的事业。这正是兑卦的体现。",
+        source: "《大唐西域记》"
+      }
+    ],
+    disaster: "六三「来兑凶」——刻意讨好别人是凶险的。上六「引兑」——诱惑别人或被人诱惑，也是危险的。",
+    avoidance: "① 以真诚的喜悦待人（和兑、孚兑）。② 不要刻意讨好别人（来兑凶）。③ 喜悦要从内心自然流露。④「朋友讲习」——与朋友一起讨论学习是喜悦的源泉。"
+  },
+  "涣": {
+    baihua: [
+      "涣卦上巽（风）下坎（水），代表「风行水上」——风吹过水面，水波扩散。涣就是涣散、离散的意思。这个卦讲的是如何应对人心涣散的局面。",
+      "卦辞说「涣，亨。王假有庙，利涉大川」——涣卦亨通。君王到宗庙凝聚人心（假=到），可以渡过大河。",
+      "九二「涣奔其机」——在离散中奔向凭靠的几案。比喻找到依靠。九五「涣汗其大号」——像出汗一样发号施令，让命令散布出去。这告诉你在组织涣散时，要用明确的指令凝聚人心。"
+    ],
+    stories: [
+      {
+        title: "汉武帝聚人心——涣卦的凝聚",
+        text: "汉武帝晚年发生巫蛊之祸，太子刘据被杀，朝野动荡人心涣散。汉武帝及时醒悟，颁布《轮台罪己诏》，反省自己的过失，调整政策休养生息。这一举措重新凝聚了人心，稳住了汉朝根基。这正是涣卦「王假有庙」——领导者主动承担责任来凝聚人心。",
+        source: "《汉书·武帝纪》"
+      }
+    ],
+    disaster: "涣卦本身就是涣散之象。上九「涣其血去逖出」——离散到了流血的地步才离开，为时已晚。",
+    avoidance: "① 人心涣散时要及时凝聚（「王假有庙」）。② 用明确的指令和大规模的动员来重建秩序。③ 散而不乱、分而不崩才是最高境界。④ 凝聚要靠共同的目标而非强制。"
+  },
+  "节": {
+    baihua: [
+      "节卦上坎（水）下兑（泽），代表「泽上有水」——水满了就会溢出。节就是节制的意思。这个卦讲的是凡事要有度。",
+      "卦辞说「节，亨，苦节不可贞」——节制是亨通的，但过分的苦节（过度节制）反而不可取。凡事有度，适可而止。",
+      "初九「不出户庭」——不走出院子，知道什么时候该停。九二「不出门庭凶」——连大门都不出，该动的时候不动反而凶险。告诉你要该动则动，该停则停。"
+    ],
+    stories: [
+      {
+        title: "孟姜女送寒衣——节卦的悲哀",
+        text: "孟姜女的丈夫范喜良被征去修长城。孟姜女思夫心切，千里送寒衣。到了长城才知道丈夫已死。她悲痛欲绝哭倒长城。孟姜女的情感是感人的，但征夫的制度是不节制的——秦始皇滥用民力不知节制，最终导致秦朝灭亡。这正是节卦的警示——不知节制必然导致崩溃。",
+        source: "民间传说"
+      }
+    ],
+    disaster: "上六「苦节，贞凶」——过分苛刻的节制反而凶险。比如过度节俭变成吝啬、过度工作损害健康。",
+    avoidance: "① 凡事有度，适可而止。② 节制是美德但不要过度（苦节不可贞）。③ 知道何时该动、何时该止（「不出户庭」与「不出门庭」之间把握好度）。④ 节俭而不吝啬，勤劳而不伤身。"
+  },
+  "中孚": {
+    baihua: [
+      "中孚卦上巽（风）下兑（泽），代表「泽上有风」——风吹过湖面。中孚就是内心的诚信。这个卦讲的是诚信的力量。",
+      "卦辞说「中孚，豚鱼吉。利涉大川，利贞」——用诚信来祭祀即使是小猪和鱼这样的薄礼也是吉利的。诚信足以渡过大河。",
+      "九二「鸣鹤在阴，其子和之」——老鹤在树荫下叫，小鹤和着叫。比喻诚心诚意自然有回应。九五「有孚挛如」——诚信像绳子一样紧紧连结，没有过错。"
+    ],
+    stories: [
+      {
+        title: "辛君得梅妃信——中孚的感应",
+        text: "唐玄宗的梅妃因杨贵妃得宠而失势。玄宗在宫中思念梅妃，派使者暗中送了一斛珍珠给梅妃。梅妃回诗「柳叶双眉久不描，残妆和泪污红绡。长门自是无梳洗，何必珍珠慰寂寥。」玄宗虽贵为天子，和梅妃之间仍有情感的诚信感应，这正是中孚卦「鸣鹤在阴，其子和之」。",
+        source: "《梅妃传》"
+      }
+    ],
+    disaster: "上九「翰音登于天，贞凶」——鸟飞得太高声音传得太远反而危险。比喻诚信过度张扬反而有害。三「得敌，或鼓或罢，或泣或歌」——失去诚信就会反复无常。",
+    avoidance: "① 诚信是立身处世的根本。② 诚信要发自内心（中孚），不是做给别人看。③ 诚信自有感应（鸣鹤在阴，其子和之）。④ 诚信而不张扬。"
+  },
+  "小过": {
+    baihua: [
+      "小过卦上震（雷）下艮（山），代表「山上有雷」——雷在山顶声音超过正常。小过就是小的过失或稍微超过的意思。这个卦讲的是在小事上可以稍微过一点，但大事不能过。",
+      "卦辞说「小过，亨，利贞。可小事不可大事。飞鸟遗之音，不宜上宜下，大吉」——小过卦亨通。可以做小事但不要做大事。像飞鸟留下的叫声一样，不要往上走应该往下走，大吉。",
+      "六二「过其祖，遇其妣」——越过了祖父遇到了祖母。说明在小事情上越点界没关系。九四「弗过遇之，往厉必戒」——不要越过而是去迎接，如果执意前进就危险。"
+    ],
+    stories: [
+      {
+        title: "汉君脱难——小过的智慧",
+        text: "汉朝某位皇帝遇到叛乱，被迫逃离京城。逃亡途中有人建议去富庶的大城求助，但谋士说应该去小地方低调避难。最终采纳后者果然安全脱险。这正是小过卦「不宜上宜下」——在不利时期要低调行事，不要张扬。",
+        source: "《易经64卦384爻故事》"
+      }
+    ],
+    disaster: "上六「弗遇过之，飞鸟离之凶」——飞得太高脱离群体，被网捕捉。比喻超过了应有的限度必然遭殃。",
+    avoidance: "① 小事上可稍有逾越，大事上必须守规矩。② 在不利时期要低调（不宜上宜下）。③ 做事要适度，不要过分。④ 行过乎恭、丧过乎哀、用过乎俭——宁可稍有过头也要保持恭敬。"
+  },
+  "既济": {
+    baihua: [
+      "既济卦上坎（水）下离（火），代表「水在火上」——水在火上煮东西。既济就是已经成功的意思。这个卦讲的是成功之后如何守成。",
+      "卦辞说「既济，亨小，利贞。初吉终乱」——既济卦小亨通，利于坚守正道。起初吉利但最终可能混乱。这是最深刻的警示——成功之后如果不居安思危，就会走向失败。",
+      "初九「曳其轮，濡其尾」——拖住车轮不让太快，狐狸过河湿了尾巴。比喻成功后要慢下来，小心谨慎。九五「东邻杀牛不如西邻之禴祭」——东边的邻居杀牛大祭祀，不如西边邻居的薄祭。诚心比形式更重要。"
+    ],
+    stories: [
+      {
+        title: "季布潜藏遇高祖——既济的转机",
+        text: "季布被刘邦悬赏追捕，躲藏在周家。周家把他卖给朱家做奴隶。朱家知道季布身份后，非但没有举报，反而通过关系向刘邦求情。刘邦最终赦免季布并封他做官。这正是既济卦——事情看似已到绝境（初吉终乱），但因为诚信（禴祭之诚）迎来转机。",
+        source: "《史记·季布栾布列传》"
+      }
+    ],
+    disaster: "既济卦最大危险就是「初吉终乱」——成功后松懈导致混乱。上六「濡其首」——过河时把头都浸湿了，比喻乐极生悲。",
+    avoidance: "① 成功后居安思危（「思患而豫防之」）。② 保持诚心比形式更重要（东邻杀牛不如西邻禴祭）。③ 成功后要放慢脚步（曳其轮）。④ 任何时候都不要得意忘形。"
+  },
+  "未济": {
+    baihua: [
+      "未济卦上离（火）下坎（水），代表「火在水上」——火在上水在下，烧不开水。未济就是尚未成功的意思。这是六十四卦的最后一卦，代表着结束之后又是新的开始。",
+      "卦辞说「未济，亨。小狐汔济，濡其尾，无攸利」——未济卦也有亨通的一面。像小狐狸过河，快到了却湿了尾巴。虽然暂时不利但即将成功。",
+      "九二「曳其轮，贞吉」——拖住车轮不急着走，坚守正道吉利。六五「贞吉无悔，君子之光有孚吉」——坚守正道无悔，君子的光辉来自诚信。最后一卦以「有孚」结束，说明整部易经的核心就是诚信。"
+    ],
+    stories: [
+      {
+        title: "孔子穿九曲珠——未济的坚持",
+        text: "孔子周游列国推行仁政，四处碰壁。有人刁难他，拿出一颗九曲明珠（孔道九曲的珍珠）让他穿线。孔子正在为难，遇到两个女子教他用蜜糖涂在一端引蚂蚁穿过，再用丝线接上。孔子领悟到——办法总比困难多，未济不等于无解。这正是未济卦的精神：看似无路，终有出路。",
+        source: "民间故事"
+      }
+    ],
+    disaster: "未济卦本身不是凶卦，但「小狐汔济，濡其尾」警示：越到成功时刻越容易出差错。初六「濡其尾吝」——刚开始就湿了尾巴，不太顺利。",
+    avoidance: "① 未完成不等于失败，继续努力终将成功。② 越接近成功越要谨慎（小狐汔济濡其尾）。③「慎辨物居方」——谨慎分辨事物各安其位。④ 以诚信坚持到底（「有孚」是全卦的总结）。"
+  }
+};
+
+function getTrigramName(yao1, yao2, yao3) {
+  const key = [yao1, yao2, yao3].map(y => y ? '1' : '0').join('');
+  const map = {
+    '111': '乾', '110': '兑', '101': '离', '100': '震',
+    '011': '巽', '010': '坎', '001': '艮', '000': '坤'
+  };
+  return map[key];
+}
+
+// 根据上下卦查找六十四卦
+function findHexagram(upperName, lowerName) {
+  return HEXAGRAMS.find(h => h.upper === upperName && h.lower === lowerName);
+}
+
+// 爻位名称
+const POSITION_NAMES = ['初', '二', '三', '四', '五', '上'];
+
+// 获取爻位完整名称（如"初九"、"六二"）
+function getYaoPositionName(index, isYang) {
+  const yinYang = isYang ? '九' : '六';
+  return POSITION_NAMES[index] + yinYang;
+}
+
+// ==========================================================
+// 3. 应用状态
+// ==========================================================
+const state = {
+  currentStep: 0,         // 0-5，当前摇到第几爻
+  lines: [],              // [{value: true/false (阳/阴), changing: true/false (动/静)}]
+  coinResults: [],        // 每次摇卦的3枚铜钱结果
+  isComplete: false,
+  isAnimating: false
+};
+
+// ==========================================================
+// 4. DOM 引用
+// ==========================================================
+const $ = id => document.getElementById(id);
+const tossBtn = $('tossBtn');
+const stepNum = $('stepNum');
+const lineResult = $('lineResult');
+const hexagramLines = $('hexagramLines');
+const hexagramTitle = $('hexagramTitle');
+const readingArea = $('readingArea');
+const judgmentBody = $('judgmentBody');
+const changingLines = $('changingLines');
+const relatingHexagram = $('relatingHexagram');
+const historyList = $('historyList');
+const historyItems = $('historyItems');
+const historyEmpty = $('historyEmpty');
+const clearHistoryBtn = $('clearHistoryBtn');
+
+// ==========================================================
+// 5. 核心逻辑
+// ==========================================================
+
+const NUM_STEPS = 6;
+const STEP_NAMES = ['一', '二', '三', '四', '五', '六'];
+
+function tossCoins() {
+  if (state.isAnimating || state.isComplete) return;
+
+  state.isAnimating = true;
+  tossBtn.disabled = true;
+
+  // 模拟三枚铜钱：true=背(阳)，false=字(阴)
+  const coins = [
+    Math.random() < 0.5,
+    Math.random() < 0.5,
+    Math.random() < 0.5
+  ];
+  state.coinResults.push(coins);
+
+  // 统计背面数量
+  const backCount = coins.filter(c => c).length;
+
+  // 判定爻
+  let value, changing, typeName;
+  if (backCount === 3) {
+    value = true;  // 老阳
+    changing = true;
+    typeName = '老阳（○）— 动爻';
+  } else if (backCount === 0) {
+    value = false; // 老阴
+    changing = true;
+    typeName = '老阴（×）— 动爻';
+  } else if (backCount === 2) {
+    value = true;  // 少阳
+    changing = false;
+    typeName = '少阳（—）— 静爻';
+  } else {
+    value = false; // 少阴
+    changing = false;
+    typeName = '少阴（- -）— 静爻';
+  }
+
+  state.lines.push({ value, changing });
+  const posName = getYaoPositionName(state.currentStep, value);
+
+  // 铜钱动画
+  animateCoins(coins, () => {
+    // 显示结果
+    lineResult.innerHTML = `<span class="yao-label">${posName}</span>：${typeName}`;
+
+    // 更新步骤
+    state.currentStep++;
+    if (state.currentStep >= NUM_STEPS) {
+      state.isComplete = true;
+      tossBtn.disabled = true;
+      stepNum.textContent = STEP_NAMES[NUM_STEPS - 1];
+      setTimeout(() => completeReading(), 300);
+    } else {
+      stepNum.textContent = STEP_NAMES[state.currentStep];
+      tossBtn.disabled = false;
+    }
+
+    // 更新卦象显示
+    renderHexagram();
+
+    state.isAnimating = false;
+  });
+}
+
+// 铜钱动画
+function animateCoins(coins, callback) {
+  const coinEls = [1, 2, 3].map(i => $('coin' + i));
+
+  coinEls.forEach((el, i) => {
+    el.className = 'coin flipping';
+  });
+
+  setTimeout(() => {
+    coinEls.forEach((el, i) => {
+      el.className = 'coin ' + (coins[i] ? 'coin-back' : 'coin-front');
+    });
+    callback();
+  }, 600);
+}
+
+// 渲染卦象
+function renderHexagram() {
+  hexagramLines.innerHTML = '';
+  const totalLines = state.lines.length;
+
+  // 从上往下显示（先画上爻，再画初爻）
+  for (let i = totalLines - 1; i >= 0; i--) {
+    const line = state.lines[i];
+    const div = document.createElement('div');
+    div.className = 'yao-line' + (line.changing ? ' changing' : '');
+    div.style.display = 'flex';
+
+    const shape = document.createElement('span');
+    shape.className = 'line-shape ' + (line.value ? 'yang' : 'yin');
+    div.appendChild(shape);
+
+    const label = document.createElement('span');
+    label.className = 'yao-label-small';
+    label.textContent = getYaoPositionName(i, line.value);
+    div.appendChild(label);
+
+    hexagramLines.appendChild(div);
+  }
+
+  if (totalLines > 0) {
+    hexagramTitle.textContent = state.isComplete ? '起卦完成' : '正在起卦……';
+  }
+}
+
+// 完成占卜，显示解读
+function completeReading() {
+  // 提取上下卦
+  const lowerTrigram = [state.lines[0].value, state.lines[1].value, state.lines[2].value];
+  const upperTrigram = [state.lines[3].value, state.lines[4].value, state.lines[5].value];
+
+  const lowerName = getTrigramName(...lowerTrigram);
+  const upperName = getTrigramName(...upperTrigram);
+
+  const hexagram = findHexagram(upperName, lowerName);
+  if (!hexagram) {
+    hexagramTitle.textContent = '未找到对应卦象';
+    return;
+  }
+
+  hexagramTitle.textContent = hexagram.unicode + ' ' + hexagram.name + ' 卦';
+
+  // 显示解读
+  readingArea.classList.remove('hidden');
+
+  let judgmentHtml = '';
+  judgmentHtml += `<div><span class="label">卦名：</span>${hexagram.unicode} ${hexagram.name}（${hexagram.upper}上${hexagram.lower}下）</div>`;
+  judgmentHtml += `<div style="margin-top:6px;"><span class="label">卦辞：</span>${hexagram.judgment}</div>`;
+  judgmentHtml += `<div style="margin-top:6px;"><span class="label">象辞：</span>${hexagram.image}</div>`;
+  judgmentHtml += `<div style="margin-top:6px;"><span class="label">含义：</span>${hexagram.meaning}</div>`;
+  judgmentBody.innerHTML = judgmentHtml;
+
+  // 分类解读
+  const catNames = { shiyun:"时运", caiyun:"财运", jiazhai:"家宅", shenti:"身体", hunlian:"婚恋", xueye:"学业", shiye:"事业", chuxing:"出行", guansi:"官司", qiuzhi:"求职", touzi:"投资" };
+  const catKeys = ["shiyun","caiyun","jiazhai","shenti","hunlian","xueye","shiye","chuxing","guansi","qiuzhi","touzi"];
+  const categories = HEXAGRAM_CATEGORIES[hexagram.name];
+
+  let catHtml = '<div class="reading-card"><div class="card-title">分类解读</div><div class="card-body">';
+  catHtml += '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">';
+  catKeys.forEach(k => {
+    catHtml += `<span class="cat-tab" data-cat="${k}" onclick="selectCategory(this,'${hexagram.name}')" style="display:inline-block;padding:3px 12px;border:1px solid #C8A42E;border-radius:4px;font-size:13px;cursor:pointer;color:#A6861E;background:#FFF8E7;transition:all 0.2s;">${catNames[k]}</span>`;
+  });
+  catHtml += '</div><div id="catContent" style="font-size:14px;line-height:1.8;color:#3C2A1A;min-height:30px;">点击上方标签查看分类解读</div>';
+  catHtml += '</div></div>';
+
+  // 插入分类解读
+  judgmentBody.innerHTML = judgmentHtml + catHtml;
+
+  // 查找动爻，显示对应的爻辞
+  const changingIndices = [];
+  state.lines.forEach((line, i) => {
+    if (line.changing) changingIndices.push(i);
+  });
+
+  let changingHtml = '';
+  if (changingIndices.length > 0) {
+    changingHtml += '<div class="reading-card"><div class="card-title">动 爻 提 示</div><div class="card-body">';
+    changingIndices.forEach(idx => {
+      const posName = getYaoPositionName(idx, state.lines[idx].value);
+      // 从 hexagram 的 lines 中取出对应爻辞（去掉前缀）
+      const lineText = hexagram.lines[idx];
+      changingHtml += `<div class="yao-text"><b>${posName}</b>：${lineText.replace(/^[^：]*：/, '')}</div>`;
+    });
+    changingHtml += '<div style="margin-top:8px;font-size:12px;color:#8B7355;">※ 动爻表示事情有变化，可重点关注以上爻辞。</div>';
+    changingHtml += '</div></div>';
+
+    // 变卦
+    const relatedLines = state.lines.map(l => ({
+      value: l.changing ? !l.value : l.value
+    }));
+    const rLower = [relatedLines[0].value, relatedLines[1].value, relatedLines[2].value];
+    const rUpper = [relatedLines[3].value, relatedLines[4].value, relatedLines[5].value];
+    const rLowerName = getTrigramName(...rLower);
+    const rUpperName = getTrigramName(...rUpper);
+    const relatedHexagram = findHexagram(rUpperName, rLowerName);
+
+    if (relatedHexagram) {
+      changingHtml += '<div class="reading-card"><div class="card-title">变 卦</div><div class="card-body">';
+      changingHtml += `<div><span class="label">${relatedHexagram.unicode} ${relatedHexagram.name}</span>（${relatedHexagram.upper}上${relatedHexagram.lower}下）</div>`;
+      changingHtml += `<div style="margin-top:4px;">${relatedHexagram.judgment}</div>`;
+      changingHtml += `<div style="margin-top:4px;font-size:12px;color:#8B7355;">※ 变卦代表事情发展的趋势。</div>`;
+      changingHtml += '</div></div>';
+    }
+  } else {
+    changingHtml += '<div class="changing-note">此卦无动爻，宜按本卦卦辞行事。</div>';
+  }
+
+  changingLines.innerHTML = changingHtml;
+  relatingHexagram.innerHTML = '';
+
+  // 计算变卦供历史使用
+  const relatedLinesAll = state.lines.map(l => ({
+    value: l.changing ? !l.value : l.value
+  }));
+  const rLowerAll = [relatedLinesAll[0].value, relatedLinesAll[1].value, relatedLinesAll[2].value];
+  const rUpperAll = [relatedLinesAll[3].value, relatedLinesAll[4].value, relatedLinesAll[5].value];
+  const rLowerNameAll = getTrigramName(...rLowerAll);
+  const rUpperNameAll = getTrigramName(...rUpperAll);
+  const relatedHexagramAll = findHexagram(rUpperNameAll, rLowerNameAll);
+
+  // 显示白话解读、典故、防灾避祸
+  const details = HEXAGRAM_DETAILS[hexagram.name];
+  if (details) {
+    // 白话解读
+    const baihuaCard = $('baihuaCard');
+    const baihuaBody = $('baihuaBody');
+    if (details.baihua) {
+      baihuaCard.classList.remove('hidden');
+      let baihuaHtml = '<div class="baihua-text">';
+      (Array.isArray(details.baihua) ? details.baihua : [details.baihua]).forEach(p => {
+        // 支持经典原文引用（带引号或括号的）
+        const formatted = p.replace(/「([^」]*)」/g, '<div class="classical-quote">$1</div>');
+        baihuaHtml += '<p>' + formatted + '</p>';
+      });
+      baihuaHtml += '</div>';
+      baihuaBody.innerHTML = baihuaHtml;
+    }
+
+    // 典故案例
+    const storyCard = $('storyCard');
+    const storyBody = $('storyBody');
+    if (details.stories && details.stories.length > 0) {
+      storyCard.classList.remove('hidden');
+      let storyHtml = '';
+      details.stories.forEach(s => {
+        storyHtml += '<div class="story-block">';
+        storyHtml += `<div class="story-title">${s.title}</div>`;
+        storyHtml += `<div class="story-text">${s.text}</div>`;
+        if (s.source) storyHtml += `<div class="story-source">— 摘自${s.source}</div>`;
+        storyHtml += '</div>';
+      });
+      storyBody.innerHTML = storyHtml;
+    }
+
+    // 防灾避祸
+    const disasterCard = $('disasterCard');
+    const disasterBody = $('disasterBody');
+    if (details.disaster || details.avoidance) {
+      disasterCard.classList.remove('hidden');
+      let disasterHtml = '';
+      if (details.disaster) {
+        disasterHtml += '<div class="disaster-warning">';
+        disasterHtml += `<div class="warn-text"><span class="warn-icon">⚠️ 灾祸警示：</span>${details.disaster}</div>`;
+        disasterHtml += '</div>';
+      }
+      if (details.avoidance) {
+        disasterHtml += '<div class="avoidance-box">';
+        disasterHtml += `<div class="avoid-text"><span class="avoid-icon">✅ 避祸方法：</span>${details.avoidance}</div>`;
+        disasterHtml += '</div>';
+      }
+      disasterBody.innerHTML = disasterHtml;
+    }
+  }
+
+  // 保存到历史（含变卦信息）
+  saveHistory(hexagram, relatedHexagramAll);
+}
+
+// 选择分类解读标签
+function selectCategory(el, hexName) {
+  const cat = el.dataset.cat;
+  const categories = HEXAGRAM_CATEGORIES[hexName];
+  if (!categories) return;
+  const catNames = { shiyun:"时运", caiyun:"财运", jiazhai:"家宅", shenti:"身体", hunlian:"婚恋", xueye:"学业", shiye:"事业", chuxing:"出行", guansi:"官司", qiuzhi:"求职", touzi:"投资" };
+  const content = document.getElementById('catContent');
+  if (!content) return;
+  content.innerHTML = `<b style="color:#A6861E;">【${catNames[cat]}】</b> ${categories[cat]}`;
+  // 高亮当前标签
+  document.querySelectorAll('.cat-tab').forEach(t => {
+    t.style.background = '#FFF8E7';
+    t.style.color = '#A6861E';
+  });
+  el.style.background = '#C8A42E';
+  el.style.color = '#FFF8E7';
+}
+
+// ==========================================================
+// 6. 历史记录
+// ==========================================================
+const HISTORY_KEY = 'iching_history';
+
+function saveHistory(hexagram, relatedHexagram) {
+  const records = getHistory();
+  // 查找动爻位置
+  const changingIndices = [];
+  state.lines.forEach((l, i) => { if (l.changing) changingIndices.push(i); });
+  const record = {
+    id: Date.now(),
+    time: new Date().toLocaleString('zh-CN'),
+    hexagramName: hexagram.name,
+    hexagramUnicode: hexagram.unicode,
+    judgment: hexagram.judgment,
+    meaning: hexagram.meaning,
+    lines: state.lines.map(l => ({ value: l.value, changing: l.changing })),
+    changingCount: changingIndices.length,
+    changingIndices: changingIndices,
+    relatedHexagram: relatedHexagram ? {
+      name: relatedHexagram.name,
+      unicode: relatedHexagram.unicode,
+      judgment: relatedHexagram.judgment,
+      upper: relatedHexagram.upper,
+      lower: relatedHexagram.lower
+    } : null
+  };
+  records.unshift(record);
+  // 最多保存30条
+  if (records.length > 30) records.length = 30;
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(records));
+  renderHistory();
+}
+
+function getHistory() {
+  try {
+    return JSON.parse(localStorage.getItem(HISTORY_KEY)) || [];
+  } catch { return []; }
+}
+
+function renderHistory() {
+  const records = getHistory();
+  if (records.length === 0) {
+    historyEmpty.classList.remove('hidden');
+    historyItems.innerHTML = '';
+    clearHistoryBtn.classList.add('hidden');
+    return;
+  }
+  historyEmpty.classList.add('hidden');
+  clearHistoryBtn.classList.remove('hidden');
+
+  historyItems.innerHTML = records.map(r => `
+    <div class="history-item" onclick="showHistoryDetail(${r.id})">
+      <span class="h-name">${r.hexagramUnicode} ${r.hexagramName}卦</span>
+      <span class="h-time">${r.time}</span>
+    </div>
+  `).join('');
+}
+
+function toggleHistory() {
+  historyList.classList.toggle('open');
+  renderHistory();
+}
+
+function showHistoryDetail(id) {
+  const records = getHistory();
+  const r = records.find(rec => rec.id === id);
+  if (!r) return;
+  // 查找 hexagram 数据
+  const hex = HEXAGRAMS.find(h => h.name === r.hexagramName);
+  if (!hex) return;
+
+  // 填入展示区
+  hexagramTitle.textContent = (r.hexagramUnicode || '') + ' ' + r.hexagramName + ' 卦';
+
+  // 重建爻线（从上往下：上爻在上，初爻在下）
+  hexagramLines.innerHTML = '';
+  if (r.lines) {
+    for (let i = r.lines.length - 1; i >= 0; i--) {
+      const line = r.lines[i];
+      const div = document.createElement('div');
+      div.className = 'yao-line' + (line.changing ? ' changing' : '');
+      const shape = document.createElement('span');
+      shape.className = 'line-shape ' + (line.value ? 'yang' : 'yin');
+      div.appendChild(shape);
+      const label = document.createElement('span');
+      label.className = 'yao-label-small';
+      label.textContent = getYaoPositionName(i, line.value);
+      div.appendChild(label);
+      hexagramLines.appendChild(div);
+    }
+  }
+
+  // 显示解读
+  readingArea.classList.remove('hidden');
+
+  const catNames = { shiyun:"时运", caiyun:"财运", jiazhai:"家宅", shenti:"身体", hunlian:"婚恋", xueye:"学业", shiye:"事业", chuxing:"出行", guansi:"官司", qiuzhi:"求职", touzi:"投资" };
+  const catKeys = ["shiyun","caiyun","jiazhai","shenti","hunlian","xueye","shiye","chuxing","guansi","qiuzhi","touzi"];
+  const categories = HEXAGRAM_CATEGORIES[hex.name];
+
+  let catHtml = '<div style="margin-top:12px;border-top:1px solid #E8D5B0;padding-top:10px;"><div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;">';
+  catKeys.forEach(k => {
+    catHtml += `<span class="cat-tab" data-cat="${k}" onclick="selectCategory(this,'${hex.name}')" style="display:inline-block;padding:3px 10px;border:1px solid #C8A42E;border-radius:4px;font-size:12px;cursor:pointer;color:#A6861E;background:#FFF8E7;">${catNames[k]}</span>`;
+  });
+  catHtml += '</div><div id="catContent" style="font-size:13px;line-height:1.8;color:#3C2A1A;min-height:24px;">点击标签查看分类解读</div></div>';
+
+  judgmentBody.innerHTML = `
+    <div><span class="label">卦名：</span>${r.hexagramUnicode || ''} ${r.hexagramName}</div>
+    <div style="margin-top:6px;"><span class="label">卦辞：</span>${r.judgment || hex.judgment}</div>
+    <div style="margin-top:6px;"><span class="label">含义：</span>${r.meaning || hex.meaning}</div>
+  ` + catHtml;
+
+  // 显示历史中的动爻信息
+  let historyExtraHtml = '';
+  if (r.changingCount && r.changingCount > 0 && r.changingIndices) {
+    historyExtraHtml += '<div class="reading-card" style="margin-top:10px;"><div class="card-title">历 史 动 爻</div><div class="card-body">';
+    historyExtraHtml += `<div style="font-size:13px;color:#5C3D1E;">此卦有 <b style="color:#A6861E;">${r.changingCount}</b> 个动爻，分别位于：</div>`;
+    r.changingIndices.forEach(idx => {
+      const posName = getYaoPositionName(idx, r.lines[idx].value);
+      historyExtraHtml += `<div class="yao-text"><b>${posName}</b>${r.lines[idx].value ? '（阳爻变阴）' : '（阴爻变阳）'}</div>`;
+    });
+    historyExtraHtml += '</div></div>';
+  }
+  if (r.relatedHexagram) {
+    historyExtraHtml += '<div class="reading-card"><div class="card-title">变 卦（历史）</div><div class="card-body">';
+    historyExtraHtml += `<div><span class="label">${r.relatedHexagram.unicode || ''} ${r.relatedHexagram.name}</span>（${r.relatedHexagram.upper}上${r.relatedHexagram.lower}下）</div>`;
+    historyExtraHtml += `<div style="margin-top:4px;font-size:13px;">${r.relatedHexagram.judgment}</div>`;
+    historyExtraHtml += '</div></div>';
+  }
+  if (!historyExtraHtml) {
+    historyExtraHtml = '<div class="changing-note" style="margin-top:10px;">此卦无动爻。</div>';
+  }
+  changingLines.innerHTML = historyExtraHtml;
+  relatingHexagram.innerHTML = '';
+
+  // 隐藏白话解读、典故、避祸区域（仅新占卜时显示）
+  $('baihuaCard').classList.add('hidden');
+  $('storyCard').classList.add('hidden');
+  $('disasterCard').classList.add('hidden');
+
+  historyList.classList.remove('open');
+}
+
+function clearHistory() {
+  if (confirm('确定要清空所有卜卦记录吗？')) {
+    localStorage.removeItem(HISTORY_KEY);
+    renderHistory();
+  }
+}
+
+// ==========================================================
+// 7. 重新开始
+// ==========================================================
+function restart() {
+  state.currentStep = 0;
+  state.lines = [];
+  state.coinResults = [];
+  state.isComplete = false;
+  state.isAnimating = false;
+
+  tossBtn.disabled = false;
+  stepNum.textContent = STEP_NAMES[0];
+  lineResult.innerHTML = '';
+  hexagramTitle.textContent = '点击摇卦开始';
+  hexagramLines.innerHTML = '';
+  readingArea.classList.add('hidden');
+  $('baihuaCard').classList.add('hidden');
+  $('storyCard').classList.add('hidden');
+  $('disasterCard').classList.add('hidden');
+
+  // 清空铜钱显示
+  [1,2,3].forEach(i => {
+    const el = $('coin' + i);
+    el.className = 'coin init';
+  });
+}
+
+// ==========================================================
+// 8. 初始化
+// ==========================================================
+tossBtn.addEventListener('click', tossCoins);
+renderHistory();
+</script>
+</body>
+</html>
